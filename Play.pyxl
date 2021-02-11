@@ -1,0 +1,116 @@
+Play
+════════════════════════════════════════════════════════════════════════
+
+const BLOCK_SIZE = xy(16,16)
+const PLAYER_SPRITE_SHEETS = [
+    engineer_sprite,
+    engineer_sprite,
+    engineer_sprite,
+    engineer_sprite,
+]
+
+def map_offset(m):
+    const screen_size_in_blocks = SCREEN_SIZE / BLOCK_SIZE
+    const map_size_in_blocks = map.size
+    return xy(4, 1) * BLOCK_SIZE
+
+def at_cell_center(entity):
+    // Is this as close as we'll get to the center?
+    const distance = |entity.pos - xy(round(entity.pos.x, BLOCK_SIZE.x),round(entity.pos.y, BLOCK_SIZE.y))|
+    return max(distance.x, distance.y) < entity.speed
+
+// gets the value of the map cell from a world-space coordinate.
+// Only the sign of vel is used, to check the correct direction; its magnitude is ignored.
+def map_sprite(pos, vel default xy(0, 0)):
+    return get_map_sprite(map, round(pos / BLOCK_SIZE + sign(vel)), 0)
+
+def is_zero(v2):
+    return v2.x == 0 and v2.y == 0
+
+// Version of lerp() where t can be a vector
+def vec_lerp(a, b, t):
+    return (b - a) * t + a
+
+def player_simulate(player):
+    with next_vel, vel, pos, gamepad, angle, speed in player:
+        // Record desired upcoming turns. Assign a new value each time so that
+        // the cell-center code doesn't have to clone at every intersection
+        
+        // desired behavior:
+        // - If we're already moving
+        //   - ...and the same direction is already held, keep moving.
+        //   - ...and the opposite direction is now held, then change direction instantly.
+        //   - ...and an orthogonal direction is now held, then register next_vel and change
+        //     direction at the center of the next cell.
+        // - If we're not moving, start moving in the desired direction immediately (or just
+        //   turn if the path is blocked.
+        // - never possible to move in both X and Y simultaneously
+        if gamepad.xx: next_vel = xy(gamepad.x * speed, 0)
+        if gamepad.yy: next_vel = xy(0, gamepad.y * speed)
+        
+        debug_watch(vel)
+        debug_watch(next_vel)
+        const center = at_cell_center(player)
+        debug_watch(center)
+        let spr = map_sprite(pos, next_vel)
+        debug_watch(pos)
+        debug_watch(spr)
+        
+        if center and not is_zero(vel):
+            debug_print("Centered at <" + pos.x + "," + pos.y + ">")
+        
+        // Change velocity when allowed
+        if ((center or (‖vel + next_vel‖ < ε)) and // intersection or reverse
+                map_sprite(pos, next_vel).can_walk and // not blocked
+                ‖vel - next_vel‖ > ε): // changed
+            vel = next_vel
+            next_vel = xy(0,0)
+            
+            // Snap to a pixel on the axis that we're not moving along
+            // to prevent error from accumulating
+            pos = vec_lerp(round(pos), pos, |sign(next_vel)|)
+            
+            // Not just rotating sprites
+            //if ‖vel‖ > ε: angle = xy_to_angle(vel)
+
+        // See if the move is possible, but only stop on centers
+        if center and not map_sprite(pos, vel).can_walk:
+            // Hit wall. Stop moving
+            vel = xy(0, 0)
+        else:
+            // Clear to move
+            pos = pos + vel
+
+let map = nil
+let map_xform = xy(0,0)
+let players = []
+
+enter
+────────────────────────────────────────────────────────────────────────
+
+map = deep_clone(template_map)
+map_xform = map_offset(map)
+players = []
+for i < 1:
+    const sprite_sheet = PLAYER_SPRITE_SHEETS[i]
+    push(players, make_entity({
+        sprite_sheet:sprite_sheet,
+        sprite:sprite_sheet[0][0],
+        pos: BLOCK_SIZE * xy(1,1),
+        gamepad: gamepad_array[i],
+        vel:xy(0,0),
+        next_vel:xy(0,0),
+        speed:1,
+        }))
+
+frame
+────────────────────────────────────────────────────────────────────────
+
+preserving_transform:
+    set_transform(map_xform)
+    draw_map({map:map})
+    // Offset by ½ a grid square so that we can use integer coordinates for the centers of grid tiles
+    compose_transform(0.5 BLOCK_SIZE)
+    iterate(players, player_simulate)
+    iterate(players, draw_entity)
+debug_watch(players[0].pivot)
