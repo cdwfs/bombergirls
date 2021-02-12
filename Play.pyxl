@@ -39,6 +39,8 @@ def vec_lerp(a, b, t):
 def is_dpad_pressed(gamepad):
     // checking just gamepad.x or gamepad.y isn't sufficient; when the opposite direction
     // is pressed, there is one frame where e.g. gamepad.xx is non-zero but gamepad.x is zero
+    // TODO: not totally reliable it seems, as quadplay sometimes reports .x, .xx, and .dx as all zero
+    // while dpad is in one direction. See workaround in player_simulate().
     return (gamepad.xx or gamepad.yy) or (gamepad.x or gamepad.y)
 
 def player_simulate(player):
@@ -60,10 +62,21 @@ def player_simulate(player):
             next_vel = xy(gamepad.xx * speed, 0)
         else if gamepad.yy:
             next_vel = xy(0, gamepad.yy * speed)
+        // workaround for issue where quadplay will occasionally report the following
+        // input states for three frames when a dpad is rapidly pushed in the opposite direction:
+        //   frame N+0: .x=-1 .xx=+1 .dx=+1
+        //   frame N+1: .x= 0 .xx= 0 .dx= 0
+        //   frame N+2: .x=+1 .xx= 0 .dx=+1
+        // The state at frame N+1 looks like "dpad released", which triggers the "stop" state.
+        // So, we treat non-zero .x and .dx in the same as non-zero .xx
+        else if gamepad.dx ≠ 0 and sign(gamepad.dx) == sign(gamepad.x):
+            next_vel = xy(gamepad.x * speed, 0)
+        else if gamepad.dy ≠ 0 and sign(gamepad.dy) == sign(gamepad.y):
+            next_vel = xy(0, gamepad.y * speed)
         
         const at_center = at_cell_center(player)
         
-        // If this is a legal place to do so, apply the next_vel
+        // If this is a legal place to do so, replace vel with next_vel
         if ((at_center or (‖vel + next_vel‖ < ε)) and // intersection or reverse
                 // if the next line is commented out, you can steer into a wall to stop your movement
                 // and face the fall. Otherwise, steering into a wall just registers the intent to
@@ -74,7 +87,6 @@ def player_simulate(player):
             // Snap to a pixel on the axis that we're not moving along
             // to prevent error from accumulating
             pos = vec_lerp(round(pos), pos, |sign(next_vel)|)
-            
 
         // Determine facing direction
         const sv = sign(vel)
@@ -84,7 +96,6 @@ def player_simulate(player):
         else if sv.x ==  0 and sv.y ==  1: dir = DIR_D
 
         // Stop moving at cell centers if no input is pressed
-        // TODO: can still trigger this branch and stop motion sometimes while quickly toggling L/R
         if at_center and not is_zero(vel) and not is_dpad_pressed(gamepad):
             vel = xy(0,0)
             next_vel = xy(0,0)
