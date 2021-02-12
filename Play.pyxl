@@ -19,6 +19,12 @@ def map_offset(m):
     const map_size_in_blocks = map.size
     return xy(4, 1) * BLOCK_SIZE
 
+def map_pos_to_cell(pos):
+    return round(pos / BLOCK_SIZE)
+
+def map_cell_to_pos(cell):
+    return BLOCK_SIZE * cell
+
 def at_cell_center(entity):
     // Is this as close as we'll get to the center?
     const distance = |entity.pos - xy(round(entity.pos.x, BLOCK_SIZE.x),round(entity.pos.y, BLOCK_SIZE.y))|
@@ -27,8 +33,8 @@ def at_cell_center(entity):
 // gets the value of the map cell from a world-space coordinate.
 // Only the sign of vel is used, to check the correct direction; its magnitude is ignored.
 def map_sprite(pos, vel default xy(0, 0)):
-    return get_map_sprite(map, round(pos / BLOCK_SIZE + sign(vel)), 0)
-
+    return get_map_sprite(map, map_pos_to_cell(pos) + sign(vel), 0)
+    
 def is_zero(v2):
     return v2.x == 0 and v2.y == 0
 
