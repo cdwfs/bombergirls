@@ -8,6 +8,7 @@ const PLAYER_SPRITE_SHEETS = [
     engineer_sprite,
     engineer_sprite,
 ]
+const BOMB_SPRITE = blocks_sprite[5][15]
 
 const DIR_D = 0
 const DIR_L = 1
@@ -124,10 +125,32 @@ def player_simulate(player):
         // Update player sprite
         const anim_frame = if is_zero(vel) then 0 else loop(floor(mode_frames/4), 4)
         sprite = sprite_sheet[anim_frame][dir]
+        
+        // place bombs
+        if gamepad.aa and is_cell_empty(pos,vel):
+            const c = map_pos_to_cell(pos)
+            
+            push(bombs, make_entity({
+                sprite:BOMB_SPRITE,
+                pos: BLOCK_SIZE*(c+vel),
+                owner:0, // TODO: extract from player
+                scale:xy(1,1),
+                z:2,
+                born_frame:mode_frames,
+                }))
+        debug_watch(size(bombs))
+        if size(bombs) > 0:
+            debug_watch(bombs[0])
+
+def bomb_simulate(bomb):
+    with pos, scale, born_frame, sprite in bomb:
+        let s = 1 + 0.125*sin(π/12 * (mode_frames-born_frame))
+        scale = xy(s,s)
 
 let map = nil
 let map_xform = xy(0,0)
 let players = []
+let bombs = []
 
 enter
 ────────────────────────────────────────────────────────────────────────
@@ -135,6 +158,8 @@ enter
 map = deep_clone(template_map)
 map_xform = map_offset(map)
 players = []
+bombs = []
+
 for i < 1:
     const sprite_sheet = PLAYER_SPRITE_SHEETS[i]
     push(players, make_entity({
@@ -158,4 +183,5 @@ preserving_transform:
     compose_transform(0.5 BLOCK_SIZE)
     iterate(players, player_simulate)
     iterate(players, draw_entity)
-debug_watch(players[0].pivot)
+    iterate(bombs, bomb_simulate)
+    iterate(bombs, draw_entity)
