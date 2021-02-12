@@ -9,6 +9,13 @@ const PLAYER_SPRITE_SHEETS = [
     engineer_sprite,
 ]
 const BOMB_SPRITE = blocks_sprite[5][15]
+const PLAYER_SPAWN_SPRITES = [
+    map_tiles_sprite.start_p1,
+    map_tiles_sprite.start_p2,
+    map_tiles_sprite.start_p3,
+    map_tiles_sprite.start_p4,
+]
+const FLOOR_SPRITE = map_tiles_sprite.floor
 
 const DIR_D = 0
 const DIR_L = 1
@@ -147,31 +154,47 @@ def bomb_simulate(bomb):
         let s = 1 + 0.125*sin(π/12 * (mode_frames-born_frame))
         scale = xy(s,s)
 
+// Declare mode variables
 let map = nil
 let map_xform = xy(0,0)
 let players = []
+let player_start_icells = []
 let bombs = []
 
 enter
 ────────────────────────────────────────────────────────────────────────
 
+// Initialize mode variables
 map = deep_clone(template_map)
 map_xform = map_offset(map)
 players = []
+player_start_icells = []
 bombs = []
 
-for i < 1:
-    const sprite_sheet = PLAYER_SPRITE_SHEETS[i]
-    push(players, make_entity({
+// Search map for starting cells
+resize(player_start_icells, size(PLAYER_SPAWN_SPRITES))
+for mx < map.size.x:
+    for my < map.size.y:
+        const ms = map[mx][my]
+        for p < size(PLAYER_SPAWN_SPRITES):
+            if ms == PLAYER_SPAWN_SPRITES[p]:
+                player_start_icells[p] = xy(mx,my)
+                set_map_sprite(map, xy(mx,my), FLOOR_SPRITE)
+
+for p < 1: // TODO: use player count
+    const sprite_sheet = PLAYER_SPRITE_SHEETS[p]
+    const spawn_icell = player_start_icells[p]
+    let player_ent = make_entity({
         sprite_sheet:sprite_sheet,
         sprite:sprite_sheet[0][0],
-        pos: BLOCK_SIZE * xy(1,1),
-        gamepad: gamepad_array[i],
+        pos: BLOCK_SIZE * spawn_icell,
+        gamepad: gamepad_array[p],
         vel:xy(0,0),
         next_vel:xy(0,0),
         dir:DIR_D,
         speed:1,
-        }))
+        })
+    push(players, player_ent)
 
 frame
 ────────────────────────────────────────────────────────────────────────
