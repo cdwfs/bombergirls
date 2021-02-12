@@ -35,6 +35,13 @@ def at_cell_center(entity):
 def map_sprite(pos, vel default xy(0, 0)):
     return get_map_sprite(map, map_pos_to_cell(pos) + sign(vel), 0)
     
+def is_cell_empty(pos, vel default xy(0,0)):
+    // Check map sprite
+    if not map_sprite(pos, vel).can_walk:
+        return false
+    // TODO: Check for entity in cell
+    return true
+    
 def is_zero(v2):
     return v2.x == 0 and v2.y == 0
 
@@ -87,7 +94,7 @@ def player_simulate(player):
                 // if the next line is commented out, you can steer into a wall to stop your movement
                 // and face the fall. Otherwise, steering into a wall just registers the intent to
                 // turn the next time there's a path in that direction.
-                //map_sprite(pos, next_vel).can_walk and // not blocked
+                //is_cell_empty(pos, next_vel) and // not blocked
                 ‖vel - next_vel‖ > ε): // changed
             vel = next_vel            
             // Snap to a pixel on the axis that we're not moving along
@@ -107,7 +114,7 @@ def player_simulate(player):
             next_vel = xy(0,0)
 
         // See if the move is possible, but only stop on centers
-        if at_center and not map_sprite(pos, vel).can_walk:
+        if at_center and not is_cell_empty(pos, vel):
             // Hit wall. Stop moving
             vel = xy(0, 0)
         else:
