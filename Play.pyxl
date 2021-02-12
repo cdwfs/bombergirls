@@ -9,6 +9,11 @@ const PLAYER_SPRITE_SHEETS = [
     engineer_sprite,
 ]
 
+const DIR_D = 0
+const DIR_L = 1
+const DIR_R = 2
+const DIR_U = 3
+
 def map_offset(m):
     const screen_size_in_blocks = SCREEN_SIZE / BLOCK_SIZE
     const map_size_in_blocks = map.size
@@ -31,8 +36,13 @@ def is_zero(v2):
 def vec_lerp(a, b, t):
     return (b - a) * t + a
 
+def is_dpad_pressed(gamepad):
+    // checking just gamepad.x or gamepad.y isn't sufficient; when the opposite direction
+    // is pressed, there is one frame where e.g. gamepad.xx is non-zero but gamepad.x is zero
+    return (gamepad.xx or gamepad.yy) or (gamepad.x or gamepad.y)
+
 def player_simulate(player):
-    with next_vel, vel, pos, gamepad, angle, speed in player:
+    with next_vel, vel, pos, gamepad, speed, sprite_sheet, sprite, dir in player:
         // Record desired upcoming turns. Assign a new value each time so that
         // the cell-center code doesn't have to clone at every intersection
         
@@ -42,44 +52,54 @@ def player_simulate(player):
         //   - ...and the opposite direction is now held, then change direction instantly.
         //   - ...and an orthogonal direction is now held, then register next_vel and change
         //     direction at the center of the next cell.
+        //   - ...and the dpad is released, stop at the center of the next empty cell
         // - If we're not moving, start moving in the desired direction immediately (or just
         //   turn if the path is blocked.
         // - never possible to move in both X and Y simultaneously
-        if gamepad.xx: next_vel = xy(gamepad.x * speed, 0)
-        if gamepad.yy: next_vel = xy(0, gamepad.y * speed)
+        if gamepad.xx:
+            next_vel = xy(gamepad.xx * speed, 0)
+        else if gamepad.yy:
+            next_vel = xy(0, gamepad.yy * speed)
         
-        debug_watch(vel)
-        debug_watch(next_vel)
-        const center = at_cell_center(player)
-        debug_watch(center)
-        let spr = map_sprite(pos, next_vel)
-        debug_watch(pos)
-        debug_watch(spr)
+        const at_center = at_cell_center(player)
         
-        if center and not is_zero(vel):
-            debug_print("Centered at <" + pos.x + "," + pos.y + ">")
-        
-        // Change velocity when allowed
-        if ((center or (‖vel + next_vel‖ < ε)) and // intersection or reverse
-                map_sprite(pos, next_vel).can_walk and // not blocked
+        // If this is a legal place to do so, apply the next_vel
+        if ((at_center or (‖vel + next_vel‖ < ε)) and // intersection or reverse
+                // if the next line is commented out, you can steer into a wall to stop your movement
+                // and face the fall. Otherwise, steering into a wall just registers the intent to
+                // turn the next time there's a path in that direction.
+                //map_sprite(pos, next_vel).can_walk and // not blocked
                 ‖vel - next_vel‖ > ε): // changed
-            vel = next_vel
-            next_vel = xy(0,0)
-            
+            vel = next_vel            
             // Snap to a pixel on the axis that we're not moving along
             // to prevent error from accumulating
             pos = vec_lerp(round(pos), pos, |sign(next_vel)|)
             
-            // Not just rotating sprites
-            //if ‖vel‖ > ε: angle = xy_to_angle(vel)
+
+        // Determine facing direction
+        const sv = sign(vel)
+        if      sv.x == -1 and sv.y ==  0: dir = DIR_L
+        else if sv.x ==  1 and sv.y ==  0: dir = DIR_R
+        else if sv.x ==  0 and sv.y == -1: dir = DIR_U
+        else if sv.x ==  0 and sv.y ==  1: dir = DIR_D
+
+        // Stop moving at cell centers if no input is pressed
+        // TODO: can still trigger this branch and stop motion sometimes while quickly toggling L/R
+        if at_center and not is_zero(vel) and not is_dpad_pressed(gamepad):
+            vel = xy(0,0)
+            next_vel = xy(0,0)
 
         // See if the move is possible, but only stop on centers
-        if center and not map_sprite(pos, vel).can_walk:
+        if at_center and not map_sprite(pos, vel).can_walk:
             // Hit wall. Stop moving
             vel = xy(0, 0)
         else:
             // Clear to move
             pos = pos + vel
+        
+        // Update player sprite
+        const anim_frame = if is_zero(vel) then 0 else loop(floor(mode_frames/4), 4)
+        sprite = sprite_sheet[anim_frame][dir]
 
 let map = nil
 let map_xform = xy(0,0)
@@ -100,6 +120,7 @@ for i < 1:
         gamepad: gamepad_array[i],
         vel:xy(0,0),
         next_vel:xy(0,0),
+        dir:DIR_D,
         speed:1,
         }))
 
