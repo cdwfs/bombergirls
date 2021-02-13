@@ -160,6 +160,7 @@ let map_xform = xy(0,0)
 let players = []
 let player_start_icells = []
 let bombs = []
+let entity_grid = []
 
 enter
 ────────────────────────────────────────────────────────────────────────
@@ -170,6 +171,7 @@ map_xform = map_offset(map)
 players = []
 player_start_icells = []
 bombs = []
+entity_grid = []
 
 // Search map for starting cells
 resize(player_start_icells, size(PLAYER_SPAWN_SPRITES))
@@ -180,6 +182,13 @@ for mx < map.size.x:
             if ms == PLAYER_SPAWN_SPRITES[p]:
                 player_start_icells[p] = xy(mx,my)
                 set_map_sprite(map, xy(mx,my), FLOOR_SPRITE)
+
+// Initialize entity grid. TODO: not currently updated/maintained
+resize(entity_grid, map.size.x)
+for x < map.size.x:
+    let column = []
+    resize(column, map.size.y)
+    entity_grid[x] = column
 
 for p < 1: // TODO: use player count
     const sprite_sheet = PLAYER_SPRITE_SHEETS[p]
@@ -195,6 +204,7 @@ for p < 1: // TODO: use player count
         speed:1,
         })
     push(players, player_ent)
+    entity_grid[spawn_icell.x][spawn_icell.y] = player_ent
 
 frame
 ────────────────────────────────────────────────────────────────────────
