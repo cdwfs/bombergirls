@@ -9,6 +9,7 @@ const PLAYER_SPRITE_SHEETS = [
     engineer_sprite,
 ]
 const BOMB_SPRITE = blocks_sprite[5][15]
+const BOMB_FLASH_SPRITE = blocks_sprite[6][15]
 const PLAYER_SPAWN_SPRITES = [
     map_tiles_sprite.start_p1,
     map_tiles_sprite.start_p2,
@@ -138,7 +139,7 @@ def player_simulate(player):
         //     - No, orthogonal directional changes are only possible at cell centers. If
         //       a player's forward movement is blocked by a bomb, the only direction they
         //       can move is away (which may be into a cell that's ALSO blocked by a bomb)
-        if gamepad.aa and is_cell_empty(pos,vel):
+        if gamepad.aa and is_cell_empty(pos):
             const c = map_pos_to_cell(pos)
             push(bombs, make_entity({
                 sprite:BOMB_SPRITE,
@@ -147,12 +148,73 @@ def player_simulate(player):
                 scale:xy(1,1),
                 z:2,
                 born_frame:mode_frames,
+                fuse_frames:120,
+                range: 5,
                 }))
 
+const PF_EXPL_CENTER = {
+    sprite:map_tiles_sprite[0][2],
+    z:2,
+    }
 def bomb_simulate(bomb):
-    with pos, scale, born_frame, sprite in bomb:
-        let s = 1 + 0.125*sin(π/12 * (mode_frames-born_frame))
+    const age = mode_frames-bomb.born_frame
+    const ttl = bomb.fuse_frames - age
+    with scale in bomb:
+        // animate bomb
+        let s = 1 + 0.125*sin(π/12 * age)
         scale = xy(s,s)
+    if ttl ≤ 0:
+        // explode
+        push(explosions, make_entity({
+            pos: bomb.pos,
+            born_frames: mode_frames,
+            range:bomb.range, // how many child exposions to spawn in each direction (0+)
+            is_center:true,
+            duration:60, // how long before this explosion disappears
+            grow_time:5, // how long before this explosion grows
+            ...PF_EXPL_CENTER
+            }))
+        return iterate.REMOVE
+    if ttl ≤ 30:
+        // flash
+        bomb.sprite = if (round(ttl/3)%2 == 0) then BOMB_FLASH_SPRITE else BOMB_SPRITE
+
+const ANGLE_FOR_DIR = [-π/2, π, 0, π/2]
+const OFFSET_FOR_DIR = [xy(0,1), xy(-1,0), xy(1,0), xy(0,-1)]
+def add_child_explosion(parent, dir):
+    const age = mode_frames - parent.born_frames
+    push(new_child_explosions, make_entity({
+        pos:parent.pos + OFFSET_FOR_DIR[dir]*BLOCK_SIZE,
+        z:parent.z,
+        sprite:map_tiles_sprite[3][2],
+        angle:ANGLE_FOR_DIR[dir],
+        born_frames:mode_frames,
+        range:parent.range-1,
+        duration:parent.duration-age,
+        grow_time:parent.grow_time,
+        grow_dir:dir,
+        }))
+
+def explosion_simulate(expl):
+    const age = mode_frames - expl.born_frames
+    if age > expl.grow_time and expl.range > 0:
+        if expl.is_center:
+            expl.sprite = map_tiles_sprite[1][2] // swap center sprite to 4-way intersection
+            // repeat for each direction
+            for dir < 4:
+                const offset = OFFSET_FOR_DIR[dir]
+                if is_cell_empty(expl.pos, offset):
+                    add_child_explosion(expl, dir)
+        else:
+            expl.sprite = map_tiles_sprite[2][2] // swap center sprite to 2-way intersection
+            const offset = OFFSET_FOR_DIR[expl.grow_dir]
+            if is_cell_empty(expl.pos, offset):
+                add_child_explosion(expl, expl.grow_dir)
+        expl.range = 0 // prevent future growth
+    const ttl = expl.duration - age
+    if ttl ≤ 0:
+        return iterate.REMOVE
+    expl.opacity = clamp(ttl/15, 0, 1)
 
 // Declare mode variables
 let map = nil
@@ -160,6 +222,8 @@ let map_xform = xy(0,0)
 let players = []
 let player_start_icells = []
 let bombs = []
+let explosions = []
+let new_child_explosions = [] // can't modify explosions while iterating
 let static_entity_grid = []
 
 enter
@@ -171,6 +235,8 @@ map_xform = map_offset(map)
 players = []
 player_start_icells = []
 bombs = []
+explosions = []
+new_child_explosions = []
 static_entity_grid = []
 
 // Search map for starting cells
@@ -217,3 +283,8 @@ preserving_transform:
     iterate(players, draw_entity)
     iterate(bombs, bomb_simulate)
     iterate(bombs, draw_entity)
+    iterate(explosions, explosion_simulate)
+    // explosions may spawn child explosions, but we can't modify the explosions array while iterating.
+    extend(explosions, new_child_explosions)
+    new_child_explosions = []
+    iterate(explosions, draw_entity)
