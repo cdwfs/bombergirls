@@ -17,10 +17,10 @@ const PLAYER_SPAWN_SPRITES = [
 ]
 const FLOOR_SPRITE = map_tiles_sprite.floor
 
-const DIR_D = 0
-const DIR_L = 1
-const DIR_R = 2
-const DIR_U = 3
+const DIR_S = 0
+const DIR_W = 1
+const DIR_E = 2
+const DIR_N = 3
 
 def map_offset(m):
     const screen_size_in_blocks = SCREEN_SIZE / BLOCK_SIZE
@@ -81,58 +81,44 @@ def player_simulate(player):
         // - If we're not moving, start moving in the desired direction immediately (or just
         //   turn if the path is blocked.
         // - never possible to move in both X and Y simultaneously
-        if gamepad.xx:
-            next_vel = xy(gamepad.xx * speed, 0)
-        else if gamepad.yy:
-            next_vel = xy(0, gamepad.yy * speed)
-        // workaround for issue where quadplay will occasionally report the following
-        // input states for three frames when a dpad is rapidly pushed in the opposite direction:
-        //   frame N+0: .x=-1 .xx=+1 .dx=+1
-        //   frame N+1: .x= 0 .xx= 0 .dx= 0
-        //   frame N+2: .x=+1 .xx= 0 .dx=+1
-        // The state at frame N+1 looks like "dpad released", which triggers the "stop" state.
-        // So, we treat non-zero .x and .dx in the same as non-zero .xx
-        else if gamepad.dx ≠ 0 and sign(gamepad.dx) == sign(gamepad.x):
-            next_vel = xy(gamepad.x * speed, 0)
-        else if gamepad.dy ≠ 0 and sign(gamepad.dy) == sign(gamepad.y):
-            next_vel = xy(0, gamepad.y * speed)
+        let sv = sign(vel)
+        let sg = sign(xy(gamepad.x, gamepad.y))
+        if |sg.x| > ε:
+            next_vel = xy(sg.x * speed, 0)
+        else if |sg.y| > ε:
+            next_vel = xy(0, sg.y * speed)
         
         const at_center = at_cell_center(player)
-        
-        // If this is a legal place to do so, replace vel with next_vel
-        if ((at_center or (‖vel + next_vel‖ < ε)) and // intersection or reverse
-                // if the next line is commented out, you can steer into a wall to stop your movement
-                // and face the fall. Otherwise, steering into a wall just registers the intent to
-                // turn the next time there's a path in that direction.
-                //is_cell_empty(pos, next_vel) and // not blocked
-                ‖vel - next_vel‖ > ε): // changed
-            vel = next_vel            
+        const next_vel_is_opposite = ‖vel + next_vel‖ < ε
+        const next_vel_is_different = ‖vel - next_vel‖ > ε
+        if (at_center or next_vel_is_opposite) and next_vel_is_different:
+            vel = next_vel
+            sv = sign(vel)
             // Snap to a pixel on the axis that we're not moving along
             // to prevent error from accumulating
             pos = vec_lerp(round(pos), pos, |sign(next_vel)|)
-
         // Determine facing direction
-        const sv = sign(vel)
-        if      sv.x == -1 and sv.y ==  0: dir = DIR_L
-        else if sv.x ==  1 and sv.y ==  0: dir = DIR_R
-        else if sv.x ==  0 and sv.y == -1: dir = DIR_U
-        else if sv.x ==  0 and sv.y ==  1: dir = DIR_D
-
-        // Stop moving at cell centers if no input is pressed
-        if at_center and not is_zero(vel) and not is_dpad_pressed(gamepad):
+        if      sv.x == -1 and sv.y ==  0: dir = DIR_W
+        else if sv.x ==  1 and sv.y ==  0: dir = DIR_E
+        else if sv.x ==  0 and sv.y == -1: dir = DIR_N
+        else if sv.x ==  0 and sv.y ==  1: dir = DIR_S
+        else: dir = dir
+        // Stop moving at cell centers if no dpad input
+        if at_center and not is_zero(sv) and not is_dpad_pressed(gamepad):
             vel = xy(0,0)
+            sv = xy(0,0)
             next_vel = xy(0,0)
-
         // See if the move is possible, but only stop on centers
         if at_center and not is_cell_empty(pos, vel):
             // Hit wall. Stop moving
-            vel = xy(0, 0)
+            vel = xy(0,0)
+            sv = xy(0,0)
         else:
             // Clear to move
             pos = pos + vel
-        
+        assert(sv.x == 0 || sv.y == 0, "velocity " + vec_str(vel) + " must be all X or all Y")
         // Update player sprite
-        const anim_frame = if is_zero(vel) then 0 else loop(floor(mode_frames/4), 4)
+        const anim_frame = if is_zero(sv) then 0 else loop(floor(mode_frames/4), 4)
         sprite = sprite_sheet[anim_frame][dir]
         
         // place bombs
@@ -202,7 +188,7 @@ for p < 1: // TODO: use player count
         gamepad: gamepad_array[p],
         vel:xy(0,0),
         next_vel:xy(0,0),
-        dir:DIR_D,
+        dir:DIR_S,
         speed:1,
         })
     push(players, player_ent)
