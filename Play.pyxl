@@ -120,22 +120,34 @@ def player_simulate(player):
         // Update player sprite
         const anim_frame = if is_zero(sv) then 0 else loop(floor(mode_frames/4), 4)
         sprite = sprite_sheet[anim_frame][dir]
-        
+
         // place bombs
+        // desired behavior:
+        // - bombs are always placed at the center of a cell
+        // - can't place a bomb in a cell that already has one
+        // - bombs are placed on the player's current cell.
+        //   - a player in the cell where a bomb is placed can move OUT of that cell,
+        //     but not back in again.
+        //   - a player can never move INTO a cell with a bomb.
+        //   - if a player is mostly into a new cell, the bomb will be placed in front
+        //     of them, such that it can be immediately kicked (or block further movement)
+        // - The collision radius for bombs is effectively ½ as large as a full cell.
+        //   - This means a player can move partway into a cell with a bomb, and can
+        //     be trapped between two bombs in a corridor.
+        //   - Does this mean a player could move between bombs in an open space?
+        //     - No, orthogonal directional changes are only possible at cell centers. If
+        //       a player's forward movement is blocked by a bomb, the only direction they
+        //       can move is away (which may be into a cell that's ALSO blocked by a bomb)
         if gamepad.aa and is_cell_empty(pos,vel):
             const c = map_pos_to_cell(pos)
-            
             push(bombs, make_entity({
                 sprite:BOMB_SPRITE,
-                pos: BLOCK_SIZE*(c+vel),
+                pos: BLOCK_SIZE*c,
                 owner:0, // TODO: extract from player
                 scale:xy(1,1),
                 z:2,
                 born_frame:mode_frames,
                 }))
-        debug_watch(size(bombs))
-        if size(bombs) > 0:
-            debug_watch(bombs[0])
 
 def bomb_simulate(bomb):
     with pos, scale, born_frame, sprite in bomb:
