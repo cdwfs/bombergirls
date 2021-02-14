@@ -4,9 +4,9 @@ Play
 const BLOCK_SIZE = xy(16,16)
 const PLAYER_SPRITE_SHEETS = [
     engineer_sprite,
-    engineer_sprite,
-    engineer_sprite,
-    engineer_sprite,
+    mage_sprite,
+    rogue_sprite,
+    warrior_sprite,
 ]
 const BOMB_SPRITE = blocks_sprite[5][15]
 const BOMB_FLASH_SPRITE = blocks_sprite[6][15]
@@ -268,7 +268,7 @@ for mx < map.size.x:
                 player_start_icells[p] = xy(mx,my)
                 set_map_sprite(map, xy(mx,my), FLOOR_SPRITE)
 
-for p < 1: // TODO: use player count
+for p < 2: // TODO: use player count
     const sprite_sheet = PLAYER_SPRITE_SHEETS[p]
     const spawn_icell = player_start_icells[p]
     let player_ent = make_entity({
