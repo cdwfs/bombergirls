@@ -83,6 +83,10 @@ def player_simulate(player):
         // Record desired upcoming turns. Assign a new value each time so that
         // the cell-center code doesn't have to clone at every intersection
         
+        // TODO: figure out why this causes character to fly off through walls. Something
+        // about the speed changing mid-game violates some assumptions?
+        //speed = if gamepad.b ≠ 0 then 2 else 1
+        
         // desired behavior:
         // - If we're already moving
         //   - ...and the same direction is already held, keep moving.
