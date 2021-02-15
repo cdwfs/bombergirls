@@ -235,12 +235,13 @@ def itor_active_bomber_kill(bomber):
 
 // Process a dead bomber
 // target: dead_bombers
-// RO: bomber.death_time
-// RW: bomber.sprite, bomber.opacity
+// RO: bomber.death_time, bomber.player_index
+// RW: bomber.sprite, bomber.opacity, active_bombers
 def itor_dead_bomber_process(corpse):
     const age = mode_frames - corpse.death_time
     if age > 180:
         // TODO: corpse has finally died, now what?
+        push(active_bombers, make_bomber_entity(corpse.player_index))
         return iterate.REMOVE
     let frame = floor(clamp((age-120)/5, 0, 3))
     corpse.sprite = death_sprite[frame][0]
