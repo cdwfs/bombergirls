@@ -79,25 +79,39 @@ def is_dpad_pressed(gamepad):
     // while dpad is in one direction. See workaround in player_simulate().
     return (gamepad.xx or gamepad.yy) or (gamepad.x or gamepad.y)
 
-def player_simulate(player):
-    with next_vel, vel, pos, gamepad, speed, sprite_sheet, sprite, dir in player:
-        // Record desired upcoming turns. Assign a new value each time so that
-        // the cell-center code doesn't have to clone at every intersection
-        
-        // TODO: figure out why this causes character to fly off through walls. Something
-        // about the speed changing mid-game violates some assumptions?
-        //speed = if gamepad.b ≠ 0 then 2 else 1
-        
-        // desired behavior:
-        // - If we're already moving
-        //   - ...and the same direction is already held, keep moving.
-        //   - ...and the opposite direction is now held, then change direction instantly.
-        //   - ...and an orthogonal direction is now held, then register next_vel and change
-        //     direction at the center of the next cell.
-        //   - ...and the dpad is released, stop at the center of the next empty cell
-        // - If we're not moving, start moving in the desired direction immediately (or just
-        //   turn if the path is blocked.
-        // - never possible to move in both X and Y simultaneously
+def make_bomber_entity(player_index):
+    const sprite_sheet = PLAYER_SPRITE_SHEETS[player_index]
+    return make_entity({
+        sprite_sheet:sprite_sheet,
+        sprite:sprite_sheet[0][0],
+        pos: BLOCK_SIZE * player_start_icells[player_index],
+        gamepad: gamepad_array[player_index],
+        vel:xy(0,0),
+        next_vel:xy(0,0),
+        dir:DIR_S,
+        speed:1,
+        player_index:player_index,
+        })
+
+// ACTIVE BOMBERS
+
+// Determine bomber velocity and facing direction for this frame.
+// target: active_bombers
+// RO: map, bomber.pos, bomber.gamepad, bomber.speed, bomber.sprite_sheet
+// RW: bomber.next_vel, bomber.vel, bomber.dir, bomber.sprite
+def itor_active_bomber_update_velocity(bomber):
+    // desired behavior:
+    // - If we're already moving
+    //   - ...and the same direction is already held, keep moving.
+    //   - ...and the opposite direction is now held, then change direction instantly.
+    //   - ...and an orthogonal direction is now held, then register next_vel and change
+    //     direction at the center of the next cell.
+    //   - ...and the dpad is released, stop at the center of the next empty cell
+    // - If we're not moving, start moving in the desired direction immediately (or just
+    //   turn if the path is blocked.
+    // - never possible to move in both X and Y simultaneously
+    with next_vel, vel, gamepad, speed, dir, sprite, sprite_sheet in bomber:
+        // Record desired upcoming turns based on gamepad state
         let sv = sign(vel)
         let sg = sign(xy(gamepad.x, gamepad.y))
         if |sg.x| > ε:
@@ -105,26 +119,43 @@ def player_simulate(player):
         else if |sg.y| > ε:
             next_vel = xy(0, sg.y * speed)
         
-        const at_center = at_cell_center(player)
-        const next_vel_is_opposite = ‖vel + next_vel‖ < ε
-        const next_vel_is_different = ‖vel - next_vel‖ > ε
+        // TODO: figure out why this causes bombers to fly off through walls. Something
+        // about the speed changing mid-game violates some assumptions?
+        //speed = if gamepad.b ≠ 0 then 2 else 1
+        
+        const at_center = at_cell_center(bomber)
+        const vel_dir = direction(vel)
+        const next_vel_dir = direction(next_vel)
+        const next_vel_is_opposite = ‖vel_dir + next_vel_dir‖ < ε
+        const next_vel_is_different = ‖vel_dir - next_vel_dir‖ > ε
         if (at_center or next_vel_is_opposite) and next_vel_is_different:
             vel = next_vel
             sv = sign(vel)
-            // Snap to a pixel on the axis that we're not moving along
-            // to prevent error from accumulating
-            pos = vec_lerp(round(pos), pos, |sign(next_vel)|)
         // Determine facing direction
         if      sv.x == -1 and sv.y ==  0: dir = DIR_W
         else if sv.x ==  1 and sv.y ==  0: dir = DIR_E
         else if sv.x ==  0 and sv.y == -1: dir = DIR_N
         else if sv.x ==  0 and sv.y ==  1: dir = DIR_S
-        else: dir = dir
+        // otherwise, keep current direction
+        
         // Stop moving at cell centers if no dpad input
         if at_center and not is_zero(sv) and not is_dpad_pressed(gamepad):
             vel = xy(0,0)
             sv = xy(0,0)
             next_vel = xy(0,0)
+
+        // Update bomber sprite
+        const anim_frame = if is_zero(sv) then 0 else loop(floor(mode_frames/4), 4)
+        sprite = sprite_sheet[anim_frame][dir]
+
+// Apply current velocity to bomber position, taking into account obstacles that block movement.
+// target: active_bombers
+// RO: bomb_grid
+// RW: bomber.pos, bomber.vel
+def itor_active_bomber_move(bomber):
+    const at_center = at_cell_center(bomber)
+    with vel, pos in bomber:
+        let sv = sign(vel)
         // bombs stop movement halfway into the bomb's cell
         const icell = map_pos_to_cell(pos)
         const fcell = xy((pos.x/BLOCK_SIZE.x) % 1.0, (pos.y/BLOCK_SIZE.y) % 1.0)
@@ -139,67 +170,114 @@ def player_simulate(player):
             vel = xy(0,0)
             sv = xy(0,0)
         else if blocked_by_bomb:
-            // don't move. Don't clear velocity either, which seems risky.
+            // don't move. Don't clear velocity either, which seems risky?
         else:
             // Clear to move
             pos = pos + vel
+            // Snap to a pixel on the axis that we're not moving along
+            // to prevent error from accumulating
+            pos = vec_lerp(round(pos), pos, |sign(vel)|)
         assert(sv.x == 0 || sv.y == 0, "velocity " + vec_str(vel) + " must be all X or all Y")
-        // Update player sprite
-        if not player.dead:
-            const anim_frame = if is_zero(sv) then 0 else loop(floor(mode_frames/4), 4)
-            sprite = sprite_sheet[anim_frame][dir]
 
-        // Check for player death
-        if explosion_grid[icell.x][icell.y] and not player.dead:
-            player.dead = true
-            player.death_time = mode_frames
-            player.sprite = death_sprite[0][0]
-        if player.dead and mode_frames - player.death_time > 120:
-            let frame = floor(clamp(((mode_frames - player.death_time)-120) / 5, 0, 3))
-            player.sprite = death_sprite[frame][0]
-            player.opacity = clamp((180-(mode_frames - player.death_time))/60,0,1)
-        if player.dead and mode_frames - player.death_time > 180:
-            return iterate.REMOVE
+// Allow bombers to place bombs
+// RO: bomber.gamepad, bomber.pos, mode_frames
+// RW: bomb_grid
+def itor_active_bomber_place_bomb(bomber):
+    // place bombs
+    // desired behavior:
+    // - bombs are always placed at the center of a cell
+    // - can't place a bomb in a cell that already has one
+    // - bombs are placed on the player's current cell.
+    //   - a player in the cell where a bomb is placed can move OUT of that cell,
+    //     but not back in again.
+    //   - a player can never move INTO a cell with a bomb.
+    //   - if a player is mostly into a new cell, the bomb will be placed in front
+    //     of them, such that it can be immediately kicked (or block further movement)
+    // - The collision radius for bombs is effectively ½ as large as a full cell.
+    //   - This means a player can move partway into a cell with a bomb, and can
+    //     be trapped between two bombs in a corridor.
+    //   - Does this mean a player could move between bombs in an open space?
+    //     - No, orthogonal directional changes are only possible at cell centers. If
+    //       a player's forward movement is blocked by a bomb, the only direction they
+    //       can move is away (which may be into a cell that's ALSO blocked by a bomb)
+    const icell = map_pos_to_cell(bomber.pos)
+    if bomber.gamepad.aa and is_cell_empty(bomber.pos) and not bomb_grid[icell.x][icell.y]:
+        push(bombs, make_entity({
+            sprite:BOMB_SPRITE,
+            pos: BLOCK_SIZE*icell,
+            owner:0, // TODO: extract from player
+            scale:xy(1,1),
+            z:2,
+            born_frame:mode_frames,
+            fuse_frames:120,
+            range: 5,
+            }))
+        // mark cell in bomb_grid as bomb-y
+        bomb_grid[icell.x][icell.y] = true
 
-        // place bombs
-        // desired behavior:
-        // - bombs are always placed at the center of a cell
-        // - can't place a bomb in a cell that already has one
-        // - bombs are placed on the player's current cell.
-        //   - a player in the cell where a bomb is placed can move OUT of that cell,
-        //     but not back in again.
-        //   - a player can never move INTO a cell with a bomb.
-        //   - if a player is mostly into a new cell, the bomb will be placed in front
-        //     of them, such that it can be immediately kicked (or block further movement)
-        // - The collision radius for bombs is effectively ½ as large as a full cell.
-        //   - This means a player can move partway into a cell with a bomb, and can
-        //     be trapped between two bombs in a corridor.
-        //   - Does this mean a player could move between bombs in an open space?
-        //     - No, orthogonal directional changes are only possible at cell centers. If
-        //       a player's forward movement is blocked by a bomb, the only direction they
-        //       can move is away (which may be into a cell that's ALSO blocked by a bomb)
-        if gamepad.aa and is_cell_empty(pos) and not bomb_grid[icell.x][icell.y]:
-            push(bombs, make_entity({
-                sprite:BOMB_SPRITE,
-                pos: BLOCK_SIZE*icell,
-                owner:0, // TODO: extract from player
-                scale:xy(1,1),
-                z:2,
-                born_frame:mode_frames,
-                fuse_frames:120,
-                range: 5,
-                }))
-            // mark cell in bomb_grid as bomb-y
-            bomb_grid[icell.x][icell.y] = true
+// Check for player death conditions. If true, move from active_bombers and add to dead_bombers.
+// target: active_bombers
+// RO: bomber.pos, explosion_grid, mode_frames
+// RW: bomber.death_frame, dead_bombers
+def itor_active_bomber_kill(bomber):
+    const icell = map_pos_to_cell(bomber.pos)
+    if explosion_grid[icell.x][icell.y]:
+        push(dead_bombers, make_entity({
+            pos:bomber.pos,
+            sprite:death_sprite[0][0],
+            z: bomber.z,
+            death_time:mode_frames,
+            player_index:bomber.player_index
+            }))
+        return iterate.REMOVE
 
+// DEAD BOMBERS
 
-def bomb_simulate(bomb):
-    const age = mode_frames-bomb.born_frame
+// Process a dead bomber
+// target: dead_bombers
+// RO: bomber.death_time
+// RW: bomber.sprite, bomber.opacity
+def itor_dead_bomber_process(corpse):
+    const age = mode_frames - corpse.death_time
+    if age > 180:
+        // TODO: corpse has finally died, now what?
+        return iterate.REMOVE
+    let frame = floor(clamp((age-120)/5, 0, 3))
+    corpse.sprite = death_sprite[frame][0]
+    corpse.opacity = clamp((180-age)/60,0,1)
+    
+// BOMBS
+
+// Add all unexploded bombs to the bomb grid
+// target: bombs
+// RO: bomb.pos
+// RW: bomb_grid
+def itor_bomb_populate_grid(bomb):
+    const icell = map_pos_to_cell(bomb.pos)
+    bomb_grid[icell.x][icell.y] = true
+
+// animate unexploded bombs
+// target: bombs
+// RO: bomb.born_frame, mode_frames
+// RW: bomb.scale, bomb.sprite
+def itor_bomb_animate(bomb):
+    const age = mode_frames - bomb.born_frame
     const ttl = bomb.fuse_frames - age
-    with scale in bomb:
-        // animate bomb
-        let s = 1 + 0.125*sin(π/12 * age)
-        scale = xy(s,s)
+    // pulse bomb scale
+    let s = 1 + 0.125*sin(π/12 * age)
+    bomb.scale = xy(s,s)
+    // flash with increasing frequency as explosion nears
+    if ttl ≤ 30:
+        bomb.sprite = if (round(ttl/3)%2 == 0) then BOMB_FLASH_SPRITE else BOMB_SPRITE
+    
+// Detonate any bombs whose time has come. This will remove them from the bombs array
+// and spawn explosion entities.
+// target: bombs
+// RO: bomb.born_frame, mode_frames, bomb.fuse_frames, bomb.pos, bomb.range, explosion_grid
+// RW: explosions, bomb_grid
+def itor_bomb_explode(bomb):
+    const age = mode_frames - bomb.born_frame
+    const ttl = bomb.fuse_frames - age
     const icell = map_pos_to_cell(bomb.pos)
     if ttl ≤ 0 or explosion_grid[icell.x][icell.y]:
         // explode
@@ -213,18 +291,25 @@ def bomb_simulate(bomb):
             sprite:map_tiles_sprite[0][2],
             z:2,
             }))
+        bomb_grid[icell.x][icell.y] = false
         return iterate.REMOVE
-    if ttl ≤ 30:
-        // flash
-        bomb.sprite = if (round(ttl/3)%2 == 0) then BOMB_FLASH_SPRITE else BOMB_SPRITE
-    // mark cell in bomb_grid as bomb-y
-    bomb_grid[icell.x][icell.y] = true
 
+// EXPLOSIONS
+
+// Add all explosion entities to the explosion_grid
+// target: explosions
+// RO: expl.pos
+// RW: explosion_grid
+def itor_explosion_populate_grid(expl):
+    const icell = map_pos_to_cell(expl.pos)
+    explosion_grid[icell.x][icell.y] = true
+
+// helper for grow_explosions()
 const ANGLE_FOR_DIR = [-π/2, π, 0, π/2]
 def add_child_explosion(parent, dir):
     const age = mode_frames - parent.born_frames
     const child_pos = parent.pos + OFFSET_FOR_DIR[dir]*BLOCK_SIZE
-    push(new_child_explosions, make_entity({
+    push(explosions, make_entity({
         pos:child_pos,
         z:parent.z,
         sprite:map_tiles_sprite[3][2],
@@ -235,42 +320,52 @@ def add_child_explosion(parent, dir):
         grow_time:parent.grow_time,
         grow_dir:dir,
         }))
-    // mark cell in explosion_grid as explode-y
-    const icell = map_pos_to_cell(child_pos)
-    explosion_grid[icell.x][icell.y] = true
 
-def explosion_simulate(expl):
-    const age = mode_frames - expl.born_frames
-    if age > expl.grow_time and expl.range > 0:
-        if expl.is_center:
-            expl.sprite = map_tiles_sprite[1][2] // swap center sprite to 4-way intersection
-            // repeat for each direction
-            for dir < 4:
-                const offset = OFFSET_FOR_DIR[dir]
+// Grow explosions, adding new explosion entities to the end of the array.
+// RO: map, mode_frames, expl.pos, expl.born_frames, expl.grow_time,
+//     expl.is_center, expl.grow_dir, expl.duration
+// RW: expl.sprite, expl.range
+def grow_explosions(explosions):
+    const explosion_count = size(explosions)
+    for i < explosion_count:
+        let expl = explosions[i]
+        const age = mode_frames - expl.born_frames
+        if age > expl.grow_time and expl.range > 0:
+            if expl.is_center:
+                expl.sprite = map_tiles_sprite[1][2] // swap center sprite to 4-way intersection
+                // repeat for each direction
+                for dir < 4:
+                    const offset = OFFSET_FOR_DIR[dir]
+                    if is_cell_empty(expl.pos, offset):
+                        add_child_explosion(expl, dir)
+            else:
+                expl.sprite = map_tiles_sprite[2][2] // swap center sprite to 2-way intersection
+                const offset = OFFSET_FOR_DIR[expl.grow_dir]
                 if is_cell_empty(expl.pos, offset):
-                    add_child_explosion(expl, dir)
-        else:
-            expl.sprite = map_tiles_sprite[2][2] // swap center sprite to 2-way intersection
-            const offset = OFFSET_FOR_DIR[expl.grow_dir]
-            if is_cell_empty(expl.pos, offset):
-                add_child_explosion(expl, expl.grow_dir)
-        expl.range = 0 // prevent future growth
+                    add_child_explosion(expl, expl.grow_dir)
+            expl.range = 0 // prevent future growth. TODO: add to new non-growing explosion list?
+            
+// Cause explosions to fade out over time, and eventually be deleted.
+// target: explosions
+// RO: mode_frames, expl.born_frames, expl.duration
+// RW: explosions, expl.opacity
+def itor_explosion_fade_out(expl):
+    const age = mode_frames - expl.born_frames
     const ttl = expl.duration - age
     if ttl ≤ 0:
         return iterate.REMOVE
     expl.opacity = clamp(ttl/15, 0, 1)
-    // mark cell in explosion_grid as explode-y
-    const icell = map_pos_to_cell(expl.pos)
-    explosion_grid[icell.x][icell.y] = true
+
+////////////////// old stuff
 
 // Declare mode variables
 let map = nil
 let map_xform = xy(0,0)
-let players = []
+let active_bombers = []
+let dead_bombers = []
 let player_start_icells = []
 let bombs = []
 let explosions = []
-let new_child_explosions = [] // can't modify explosions while iterating
 let explosion_grid = []
 let bomb_grid = []
 
@@ -280,15 +375,15 @@ enter
 // Initialize mode variables
 map = deep_clone(template_map)
 map_xform = map_offset(map)
-players = []
+active_bombers = []
+dead_bombers = []
 player_start_icells = []
 bombs = []
 explosions = []
-new_child_explosions = []
 explosion_grid = []
 bomb_grid = []
 
-// Search map for starting cells
+// Search map for starting cells, so we can look them up by player index
 resize(player_start_icells, size(PLAYER_SPAWN_SPRITES))
 for mx < map.size.x:
     for my < map.size.y:
@@ -296,41 +391,40 @@ for mx < map.size.x:
         for p < size(PLAYER_SPAWN_SPRITES):
             if ms == PLAYER_SPAWN_SPRITES[p]:
                 player_start_icells[p] = xy(mx,my)
+                // overwrite the map cell with a normal floor sprite.
                 set_map_sprite(map, xy(mx,my), FLOOR_SPRITE)
 
 for p < 2: // TODO: use player count
-    const sprite_sheet = PLAYER_SPRITE_SHEETS[p]
-    const spawn_icell = player_start_icells[p]
-    let player_ent = make_entity({
-        sprite_sheet:sprite_sheet,
-        sprite:sprite_sheet[0][0],
-        pos: BLOCK_SIZE * spawn_icell,
-        gamepad: gamepad_array[p],
-        vel:xy(0,0),
-        next_vel:xy(0,0),
-        dir:DIR_S,
-        speed:1,
-        })
-    push(players, player_ent)
+    push(active_bombers, make_bomber_entity(p))
 
 frame
 ────────────────────────────────────────────────────────────────────────
 
+// Explode bombs, potentially creating explosions
+iterate(bombs, itor_bomb_explode)
+// grow and fade explosions
+grow_explosions(explosions)
+iterate(explosions, itor_explosion_fade_out)
+explosion_grid = make_array2d(map.size.x, map.size.y, false)
+iterate(explosions, itor_explosion_populate_grid)
+// Populate the bomb grid, including placing new bombs
+bomb_grid = make_array2d(map.size.x, map.size.y, false)
+iterate(bombs, itor_bomb_populate_grid)
+iterate(active_bombers, itor_active_bomber_place_bomb)
+// Kill bombers touching explosions
+iterate(active_bombers, itor_active_bomber_kill)
+// Process active bombers
+iterate(active_bombers, itor_active_bomber_update_velocity)
+iterate(active_bombers, itor_active_bomber_move)
+// misc animation processing
+iterate(dead_bombers, itor_dead_bomber_process)
+iterate(bombs, itor_bomb_animate)
 preserving_transform:
     set_transform(map_xform)
     draw_map({map:map})
     // Offset by ½ a grid square so that we can use integer coordinates for the centers of grid tiles
     compose_transform(0.5 BLOCK_SIZE)
-    // explosions
-    explosion_grid = make_array2d(map.size.x, map.size.y, false)
-    iterate(explosions, explosion_simulate)
-    extend(explosions, new_child_explosions)
-    new_child_explosions = []
     iterate(explosions, draw_entity)
-    // bombs
-    bomb_grid = make_array2d(map.size.x, map.size.y, false)
-    iterate(bombs, bomb_simulate)
     iterate(bombs, draw_entity)
-    // players
-    iterate(players, player_simulate)
-    iterate(players, draw_entity)
+    iterate(active_bombers, draw_entity)
+    iterate(dead_bombers, draw_entity)
