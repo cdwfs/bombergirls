@@ -167,10 +167,6 @@ def player_simulate(player):
                 range: 5,
                 }))
 
-const PF_EXPL_CENTER = {
-    sprite:map_tiles_sprite[0][2],
-    z:2,
-    }
 def bomb_simulate(bomb):
     const age = mode_frames-bomb.born_frame
     const ttl = bomb.fuse_frames - age
@@ -188,7 +184,8 @@ def bomb_simulate(bomb):
             is_center:true,
             duration:60, // how long before this explosion disappears
             grow_time:5, // how long before this explosion grows
-            ...PF_EXPL_CENTER
+            sprite:map_tiles_sprite[0][2],
+            z:2,
             }))
         return iterate.REMOVE
     if ttl ≤ 30:
