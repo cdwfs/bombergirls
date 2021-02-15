@@ -82,15 +82,15 @@ def is_dpad_pressed(gamepad):
 def make_bomber_entity(player_index):
     const sprite_sheet = PLAYER_SPRITE_SHEETS[player_index]
     return make_entity({
-        sprite_sheet:sprite_sheet,
-        sprite:sprite_sheet[0][0],
+        sprite_sheet: sprite_sheet,
+        sprite: sprite_sheet[0][0],
         pos: BLOCK_SIZE * player_start_icells[player_index],
         gamepad: gamepad_array[player_index],
-        vel:xy(0,0),
-        next_vel:xy(0,0),
-        dir:DIR_S,
-        speed:1,
-        player_index:player_index,
+        vel: xy(0,0),
+        next_vel: xy(0,0),
+        dir: DIR_S,
+        speed: 1,
+        player_index: player_index,
         })
 
 // ACTIVE BOMBERS
@@ -203,16 +203,14 @@ def itor_active_bomber_place_bomb(bomber):
     const icell = map_pos_to_cell(bomber.pos)
     if bomber.gamepad.aa and is_cell_empty(bomber.pos) and not bomb_grid[icell.x][icell.y]:
         push(bombs, make_entity({
-            sprite:BOMB_SPRITE,
+            sprite: BOMB_SPRITE,
             pos: BLOCK_SIZE*icell,
-            owner:0, // TODO: extract from player
-            scale:xy(1,1),
-            z:2,
-            born_frame:mode_frames,
-            fuse_frames:120,
+            scale: xy(1,1),
+            z: 2,
+            born_frame: mode_frames,
+            fuse_frames: 120,
             range: 5,
             }))
-        // mark cell in bomb_grid as bomb-y
         bomb_grid[icell.x][icell.y] = true
 
 // Check for player death conditions. If true, move from active_bombers and add to dead_bombers.
@@ -223,11 +221,11 @@ def itor_active_bomber_kill(bomber):
     const icell = map_pos_to_cell(bomber.pos)
     if explosion_grid[icell.x][icell.y]:
         push(dead_bombers, make_entity({
-            pos:bomber.pos,
-            sprite:death_sprite[0][0],
+            pos: bomber.pos,
+            sprite: death_sprite[0][0],
             z: bomber.z,
-            death_time:mode_frames,
-            player_index:bomber.player_index
+            death_time: mode_frames,
+            player_index: bomber.player_index
             }))
         return iterate.REMOVE
 
@@ -285,12 +283,12 @@ def itor_bomb_explode(bomb):
         push(explosions, make_entity({
             pos: bomb.pos,
             born_frames: mode_frames,
-            range:bomb.range, // how many child exposions to spawn in each direction (0+)
-            is_center:true,
-            duration:60, // how long before this explosion disappears
-            grow_time:5, // how long before this explosion grows
-            sprite:map_tiles_sprite[0][2],
-            z:2,
+            range: bomb.range, // how many child exposions to spawn in each direction (0+)
+            is_center: true,
+            duration: 60, // how long before this explosion disappears
+            grow_time: 5, // how long before this explosion grows
+            sprite: map_tiles_sprite[0][2],
+            z: 2,
             }))
         bomb_grid[icell.x][icell.y] = false
         return iterate.REMOVE
@@ -311,15 +309,15 @@ def add_child_explosion(parent, dir):
     const age = mode_frames - parent.born_frames
     const child_pos = parent.pos + OFFSET_FOR_DIR[dir]*BLOCK_SIZE
     push(explosions, make_entity({
-        pos:child_pos,
-        z:parent.z,
-        sprite:map_tiles_sprite[3][2],
-        angle:ANGLE_FOR_DIR[dir],
-        born_frames:mode_frames,
-        range:parent.range-1,
-        duration:parent.duration-age,
-        grow_time:parent.grow_time,
-        grow_dir:dir,
+        pos: child_pos,
+        z: parent.z,
+        sprite: map_tiles_sprite[3][2],
+        angle: ANGLE_FOR_DIR[dir],
+        born_frames: mode_frames,
+        range: parent.range-1,
+        duration: parent.duration-age,
+        grow_time: parent.grow_time,
+        grow_dir: dir,
         }))
 
 // Grow explosions, adding new explosion entities to the end of the array.
@@ -357,9 +355,8 @@ def itor_explosion_fade_out(expl):
         return iterate.REMOVE
     expl.opacity = clamp(ttl/15, 0, 1)
 
-////////////////// old stuff
+// GLOBALS
 
-// Declare mode variables
 let map = nil
 let map_xform = xy(0,0)
 let active_bombers = []
