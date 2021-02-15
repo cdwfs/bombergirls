@@ -22,6 +22,7 @@ const DIR_S = 0
 const DIR_W = 1
 const DIR_E = 2
 const DIR_N = 3
+const OFFSET_FOR_DIR = [xy(0,1), xy(-1,0), xy(1,0), xy(0,-1)]
 
 def map_offset(m):
     const screen_size_in_blocks = SCREEN_SIZE / BLOCK_SIZE
@@ -124,6 +125,14 @@ def player_simulate(player):
             vel = xy(0,0)
             sv = xy(0,0)
             next_vel = xy(0,0)
+        // bombs stop movement halfway into the bomb's cell
+        const icell = map_pos_to_cell(pos)
+        const fcell = xy((pos.x/BLOCK_SIZE.x) % 1.0, (pos.y/BLOCK_SIZE.y) % 1.0)
+        let blocked_by_bomb = false
+        if fcell.x ≥ 0.5 and sv.x > 0 and bomb_grid[icell.x][icell.y]: blocked_by_bomb = true
+        if 0 < fcell.x and fcell.x < 0.5 and sv.x < 0 and bomb_grid[icell.x][icell.y]: blocked_by_bomb = true
+        if fcell.y ≥ 0.5 and sv.y > 0 and bomb_grid[icell.x][icell.y]: blocked_by_bomb = true
+        if 0 < fcell.y and fcell.y < 0.5 and sv.y < 0 and bomb_grid[icell.x][icell.y]: blocked_by_bomb = true
         // See if the move is possible, but only stop on centers
         if at_center and not is_cell_empty(pos, vel):
             // Hit wall. Stop moving
@@ -154,7 +163,6 @@ def player_simulate(player):
         //     - No, orthogonal directional changes are only possible at cell centers. If
         //       a player's forward movement is blocked by a bomb, the only direction they
         //       can move is away (which may be into a cell that's ALSO blocked by a bomb)
-        const icell = map_pos_to_cell(pos)
         if gamepad.aa and is_cell_empty(pos) and not bomb_grid[icell.x][icell.y]:
             push(bombs, make_entity({
                 sprite:BOMB_SPRITE,
@@ -195,11 +203,9 @@ def bomb_simulate(bomb):
         // flash
         bomb.sprite = if (round(ttl/3)%2 == 0) then BOMB_FLASH_SPRITE else BOMB_SPRITE
     // mark cell in bomb_grid as bomb-y
-    const icell = map_pos_to_cell(bomb.pos)
     bomb_grid[icell.x][icell.y] = true
 
 const ANGLE_FOR_DIR = [-π/2, π, 0, π/2]
-const OFFSET_FOR_DIR = [xy(0,1), xy(-1,0), xy(1,0), xy(0,-1)]
 def add_child_explosion(parent, dir):
     const age = mode_frames - parent.born_frames
     const child_pos = parent.pos + OFFSET_FOR_DIR[dir]*BLOCK_SIZE
