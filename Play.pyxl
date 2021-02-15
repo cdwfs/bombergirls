@@ -154,11 +154,11 @@ def player_simulate(player):
         //     - No, orthogonal directional changes are only possible at cell centers. If
         //       a player's forward movement is blocked by a bomb, the only direction they
         //       can move is away (which may be into a cell that's ALSO blocked by a bomb)
-        if gamepad.aa and is_cell_empty(pos):
-            const c = map_pos_to_cell(pos)
+        const icell = map_pos_to_cell(pos)
+        if gamepad.aa and is_cell_empty(pos) and not bomb_grid[icell.x][icell.y]:
             push(bombs, make_entity({
                 sprite:BOMB_SPRITE,
-                pos: BLOCK_SIZE*c,
+                pos: BLOCK_SIZE*icell,
                 owner:0, // TODO: extract from player
                 scale:xy(1,1),
                 z:2,
@@ -166,6 +166,9 @@ def player_simulate(player):
                 fuse_frames:120,
                 range: 5,
                 }))
+            // mark cell in bomb_grid as bomb-y
+            bomb_grid[icell.x][icell.y] = true
+
 
 def bomb_simulate(bomb):
     const age = mode_frames-bomb.born_frame
@@ -191,6 +194,9 @@ def bomb_simulate(bomb):
     if ttl ≤ 30:
         // flash
         bomb.sprite = if (round(ttl/3)%2 == 0) then BOMB_FLASH_SPRITE else BOMB_SPRITE
+    // mark cell in bomb_grid as bomb-y
+    const icell = map_pos_to_cell(bomb.pos)
+    bomb_grid[icell.x][icell.y] = true
 
 const ANGLE_FOR_DIR = [-π/2, π, 0, π/2]
 const OFFSET_FOR_DIR = [xy(0,1), xy(-1,0), xy(1,0), xy(0,-1)]
@@ -245,6 +251,7 @@ let bombs = []
 let explosions = []
 let new_child_explosions = [] // can't modify explosions while iterating
 let explosion_grid = []
+let bomb_grid = []
 
 enter
 ────────────────────────────────────────────────────────────────────────
@@ -258,6 +265,7 @@ bombs = []
 explosions = []
 new_child_explosions = []
 explosion_grid = []
+bomb_grid = []
 
 // Search map for starting cells
 resize(player_start_icells, size(PLAYER_SPAWN_SPRITES))
@@ -298,9 +306,10 @@ preserving_transform:
     extend(explosions, new_child_explosions)
     new_child_explosions = []
     iterate(explosions, draw_entity)
+    // bombs
+    bomb_grid = make_array2d(map.size.x, map.size.y, false)
+    iterate(bombs, bomb_simulate)
+    iterate(bombs, draw_entity)
     // players
     iterate(players, player_simulate)
     iterate(players, draw_entity)
-    // bombs
-    iterate(bombs, bomb_simulate)
-    iterate(bombs, draw_entity)
