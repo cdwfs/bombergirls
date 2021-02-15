@@ -138,13 +138,28 @@ def player_simulate(player):
             // Hit wall. Stop moving
             vel = xy(0,0)
             sv = xy(0,0)
+        else if blocked_by_bomb:
+            // don't move. Don't clear velocity either, which seems risky.
         else:
             // Clear to move
             pos = pos + vel
         assert(sv.x == 0 || sv.y == 0, "velocity " + vec_str(vel) + " must be all X or all Y")
         // Update player sprite
-        const anim_frame = if is_zero(sv) then 0 else loop(floor(mode_frames/4), 4)
-        sprite = sprite_sheet[anim_frame][dir]
+        if not player.dead:
+            const anim_frame = if is_zero(sv) then 0 else loop(floor(mode_frames/4), 4)
+            sprite = sprite_sheet[anim_frame][dir]
+
+        // Check for player death
+        if explosion_grid[icell.x][icell.y] and not player.dead:
+            player.dead = true
+            player.death_time = mode_frames
+            player.sprite = death_sprite[0][0]
+        if player.dead and mode_frames - player.death_time > 120:
+            let frame = floor(clamp(((mode_frames - player.death_time)-120) / 5, 0, 3))
+            player.sprite = death_sprite[frame][0]
+            player.opacity = clamp((180-(mode_frames - player.death_time))/60,0,1)
+        if player.dead and mode_frames - player.death_time > 180:
+            return iterate.REMOVE
 
         // place bombs
         // desired behavior:
