@@ -246,7 +246,9 @@ def itor_dead_bomber_process(corpse):
     const age = mode_frames - corpse.death_time
     if age > 180:
         // TODO: corpse has finally died, now what?
-        push(active_bombers, make_bomber_entity(corpse.player_index))
+        let new_bomber = make_bomber_entity(corpse.player_index)
+        push(active_bombers, new_bomber)
+        bomber_for_player[corpse.player_index] = new_bomber
         return iterate.REMOVE
     let frame = floor(clamp((age-120)/5, 0, 3))
     corpse.sprite = death_sprite[frame][0]
@@ -367,6 +369,7 @@ def itor_explosion_fade_out(expl):
 
 let map = nil
 let map_xform = xy(0,0)
+let bomber_for_player = []
 let active_bombers = []
 let dead_bombers = []
 let player_start_icells = []
@@ -381,6 +384,7 @@ enter
 // Initialize mode variables
 map = deep_clone(template_map)
 map_xform = map_offset(map)
+bomber_for_player = []
 active_bombers = []
 dead_bombers = []
 player_start_icells = []
@@ -401,7 +405,9 @@ for mx < map.size.x:
                 set_map_sprite(map, xy(mx,my), FLOOR_SPRITE)
 
 for p < 2: // TODO: use player count
-    push(active_bombers, make_bomber_entity(p))
+    let bomber = make_bomber_entity(p)
+    push(active_bombers, bomber)
+    push(bomber_for_player, bomber)
 
 frame
 ────────────────────────────────────────────────────────────────────────
