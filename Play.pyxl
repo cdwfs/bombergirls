@@ -91,6 +91,9 @@ def make_bomber_entity(player_index):
         dir: DIR_S,
         speed: 1,
         player_index: player_index,
+        bomb_range: 5,
+        max_active_bomb_count: 1,
+        active_bomb_count: 0,
         })
 
 // ACTIVE BOMBERS
@@ -180,8 +183,8 @@ def itor_active_bomber_move(bomber):
         assert(sv.x == 0 || sv.y == 0, "velocity " + vec_str(vel) + " must be all X or all Y")
 
 // Allow bombers to place bombs
-// RO: bomber.gamepad, bomber.pos, mode_frames
-// RW: bomb_grid
+// RO: bomber.gamepad, bomber.pos, mode_frames, bomber.max_active_bomb_count, bomber.bomb_range
+// RW: bomb_grid, bomber.active_bomb_count
 def itor_active_bomber_place_bomb(bomber):
     // place bombs
     // desired behavior:
@@ -200,6 +203,8 @@ def itor_active_bomber_place_bomb(bomber):
     //     - No, orthogonal directional changes are only possible at cell centers. If
     //       a player's forward movement is blocked by a bomb, the only direction they
     //       can move is away (which may be into a cell that's ALSO blocked by a bomb)
+    if bomber.active_bomb_count ≥ bomber.max_active_bomb_count:
+        return
     const icell = map_pos_to_cell(bomber.pos)
     if bomber.gamepad.aa and is_cell_empty(bomber.pos) and not bomb_grid[icell.x][icell.y]:
         push(bombs, make_entity({
@@ -209,8 +214,10 @@ def itor_active_bomber_place_bomb(bomber):
             z: 2,
             born_frame: mode_frames,
             fuse_frames: 120,
-            range: 5,
+            range: bomber.bomb_range,
+            bomber: bomber,
             }))
+        bomber.active_bomb_count += 1
         bomb_grid[icell.x][icell.y] = true
 
 // Check for player death conditions. If true, move from active_bombers and add to dead_bombers.
@@ -291,6 +298,7 @@ def itor_bomb_explode(bomb):
             z: 2,
             }))
         bomb_grid[icell.x][icell.y] = false
+        bomb.bomber.active_bomb_count = max(0, bomb.bomber.active_bomb_count-1)
         return iterate.REMOVE
 
 // EXPLOSIONS
