@@ -1,7 +1,7 @@
 {
     "title": "Bombergirls",
-    "developer": "Your Name Here",
-    "copyright": "©2021 Your Name Here",
+    "developer": "Cort Stratton",
+    "copyright": "©2021 Cort Stratton",
     "license": "CC0/Public Domain (Replace with your own license)",
     "packages": [],
     "scripts": [],
@@ -23,12 +23,12 @@
     },
     "version": 0,
     "min_players": 1,
-    "max_players": 1,
+    "max_players": 2,
     "cooperative": false,
     "competitive": true,
     "achievements": false,
     "highscores": false,
-    "description": "Description of your game in about 100 characters.",
+    "description": "You know what game this is. Don't make me say it out loud.",
     "constants": {},
     "screenshot_tag": "Starter Example"
 }
