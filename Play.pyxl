@@ -153,7 +153,7 @@ def itor_active_bomber_update_velocity(bomber):
 
 // Apply current velocity to bomber position, taking into account obstacles that block movement.
 // target: active_bombers
-// RO: bomb_grid
+// RO: bomb_grid, box_grid
 // RW: bomber.pos, bomber.vel
 def itor_active_bomber_move(bomber):
     const at_center = at_cell_center(bomber)
@@ -168,7 +168,7 @@ def itor_active_bomber_move(bomber):
         if fcell.y ≥ 0.5 and sv.y > 0 and bomb_grid[icell.x][icell.y]: blocked_by_bomb = true
         if 0 < fcell.y and fcell.y < 0.5 and sv.y < 0 and bomb_grid[icell.x][icell.y]: blocked_by_bomb = true
         // See if the move is possible, but only stop on centers
-        if at_center and not is_cell_empty(pos, vel):
+        if at_center and (not is_cell_empty(pos, vel) or box_grid[icell.x+sv.x][icell.y+sv.y]):
             // Hit wall. Stop moving
             vel = xy(0,0)
             sv = xy(0,0)
@@ -318,13 +318,20 @@ const ANGLE_FOR_DIR = [-π/2, π, 0, π/2]
 def add_child_explosion(parent, dir):
     const age = mode_frames - parent.born_frames
     const child_pos = parent.pos + OFFSET_FOR_DIR[dir]*BLOCK_SIZE
+    // If there is a box in this cell, this explosion shouldn't grow any further.
+    // The box-processing code will detect that there's an explosion in the same
+    // cell as the box and trigger the box-destruction process.
+    let child_range = parent.range - 1
+    const icell = map_pos_to_cell(child_pos)
+    if box_grid[icell.x][icell.y]:
+        child_range = 0
     push(explosions, make_entity({
         pos: child_pos,
         z: parent.z,
-        sprite: map_tiles_sprite[3][2],
+        sprite: map_tiles_sprite[2][2],
         angle: ANGLE_FOR_DIR[dir],
         born_frames: mode_frames,
-        range: parent.range-1,
+        range: child_range,
         duration: parent.duration-age,
         grow_time: parent.grow_time,
         grow_dir: dir,
@@ -332,7 +339,7 @@ def add_child_explosion(parent, dir):
 
 // Grow explosions, adding new explosion entities to the end of the array.
 // RO: map, mode_frames, expl.pos, expl.born_frames, expl.grow_time,
-//     expl.is_center, expl.grow_dir, expl.duration
+//     expl.is_center, expl.grow_dir, expl.duration, box_grid
 // RW: expl.sprite, expl.range
 def grow_explosions(explosions):
     const explosion_count = size(explosions)
@@ -348,7 +355,7 @@ def grow_explosions(explosions):
                     if is_cell_empty(expl.pos, offset):
                         add_child_explosion(expl, dir)
             else:
-                expl.sprite = map_tiles_sprite[2][2] // swap center sprite to 2-way intersection
+                expl.sprite = map_tiles_sprite[3][2] // swap center sprite to 2-way intersection
                 const offset = OFFSET_FOR_DIR[expl.grow_dir]
                 if is_cell_empty(expl.pos, offset):
                     add_child_explosion(expl, expl.grow_dir)
@@ -365,8 +372,33 @@ def itor_explosion_fade_out(expl):
         return iterate.REMOVE
     expl.opacity = clamp(ttl/15, 0, 1)
 
-// GLOBALS
+// BOXES
 
+// Break boxes that have been hit by explosions.
+// target: boxes
+// RO: explosion_grid, box.pos, box.z
+// RW: boxes, breaking_boxes
+def itor_box_break(box):
+    const icell = map_pos_to_cell(box.pos)
+    if explosion_grid[icell.x][icell.y]:
+        push(breaking_boxes, make_entity({
+            sprite: map_tiles_sprite[1][3],
+            pos: box.pos,
+            z: box.z+1
+            }))
+        return iterate.REMOVE
+        
+// Destroy breaking boxes once the explosion is gone
+// RO: explosion_grid, bbox.pos
+// RW: breaking_boxes, box_grid
+def itor_breaking_box_destroy(bbox):
+    const icell = map_pos_to_cell(bbox.pos)
+    if not explosion_grid[icell.x][icell.y]:
+        box_grid[icell.x][icell.y] = false
+        // TODO: spawn power-up
+        return iterate.REMOVE
+
+// GLOBALS
 let map = nil
 let map_xform = xy(0,0)
 let bomber_for_player = []
@@ -374,9 +406,12 @@ let active_bombers = []
 let dead_bombers = []
 let player_start_icells = []
 let bombs = []
+let bomb_grid = []
 let explosions = []
 let explosion_grid = []
-let bomb_grid = []
+let boxes = []
+let breaking_boxes = []
+let box_grid = []
 
 enter
 ────────────────────────────────────────────────────────────────────────
@@ -389,21 +424,42 @@ active_bombers = []
 dead_bombers = []
 player_start_icells = []
 bombs = []
+bomb_grid = []
 explosions = []
 explosion_grid = []
-bomb_grid = []
+boxes = []
+breaking_boxes = []
+box_grid = []
 
 // Search map for starting cells, so we can look them up by player index
 resize(player_start_icells, size(PLAYER_SPAWN_SPRITES))
 for mx < map.size.x:
     for my < map.size.y:
+        const icell = xy(mx,my)
         const ms = map[mx][my]
         for p < size(PLAYER_SPAWN_SPRITES):
             if ms == PLAYER_SPAWN_SPRITES[p]:
-                player_start_icells[p] = xy(mx,my)
+                player_start_icells[p] = icell
                 // overwrite the map cell with a normal floor sprite.
-                set_map_sprite(map, xy(mx,my), FLOOR_SPRITE)
+                set_map_sprite(map, icell, FLOOR_SPRITE)
 
+// Search map for box cells, replace them with floors, and spawn box entities
+box_grid = make_array2d(map.size.x, map.size.y, false)
+for mx < map.size.x:
+    for my < map.size.y:
+        const icell = xy(mx,my)
+        const ms = map[mx][my]
+        if ms == map_tiles_sprite.block:
+            const cell_pos = map_cell_to_pos(icell)
+            push(boxes, make_entity({
+                sprite: map_tiles_sprite[0][3],
+                pos: cell_pos,
+                z: 2,
+                }))
+            box_grid[icell.x][icell.y] = true
+            set_map_sprite(map, icell, FLOOR_SPRITE)
+
+// Spawn bombers
 for p < 2: // TODO: use player count
     let bomber = make_bomber_entity(p)
     push(active_bombers, bomber)
@@ -419,6 +475,9 @@ grow_explosions(explosions)
 iterate(explosions, itor_explosion_fade_out)
 explosion_grid = make_array2d(map.size.x, map.size.y, false)
 iterate(explosions, itor_explosion_populate_grid)
+// break boxes hit by explosions
+iterate(boxes, itor_box_break)
+iterate(breaking_boxes, itor_breaking_box_destroy)
 // Populate the bomb grid, including placing new bombs
 bomb_grid = make_array2d(map.size.x, map.size.y, false)
 iterate(bombs, itor_bomb_populate_grid)
@@ -440,3 +499,5 @@ preserving_transform:
     iterate(bombs, draw_entity)
     iterate(active_bombers, draw_entity)
     iterate(dead_bombers, draw_entity)
+    iterate(boxes, draw_entity)
+    iterate(breaking_boxes, draw_entity)
