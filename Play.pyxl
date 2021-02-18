@@ -76,7 +76,7 @@ def is_dpad_pressed(gamepad):
     // checking just gamepad.x or gamepad.y isn't sufficient; when the opposite direction
     // is pressed, there is one frame where e.g. gamepad.xx is non-zero but gamepad.x is zero
     // TODO: not totally reliable it seems, as quadplay sometimes reports .x, .xx, and .dx as all zero
-    // while dpad is in one direction. See workaround in player_simulate().
+    // while dpad is in one direction.
     return (gamepad.xx or gamepad.yy) or (gamepad.x or gamepad.y)
 
 def make_bomber_entity(player_index):
@@ -389,6 +389,7 @@ def itor_box_break(box):
         return iterate.REMOVE
         
 // Destroy breaking boxes once the explosion is gone
+// target: boxes
 // RO: explosion_grid, bbox.pos
 // RW: breaking_boxes, box_grid
 def itor_breaking_box_destroy(bbox):
