@@ -91,7 +91,7 @@ def make_bomber_entity(player_index):
         dir: DIR_S,
         speed: 1,
         player_index: player_index,
-        bomb_range: 5,
+        bomb_range: 1,
         max_active_bomb_count: 1,
         active_bomb_count: 0,
         })
@@ -241,7 +241,7 @@ def itor_active_bomber_kill(bomber):
 // Process a dead bomber
 // target: dead_bombers
 // RO: bomber.death_time, bomber.player_index
-// RW: bomber.sprite, bomber.opacity, active_bombers
+// RW: bomber.sprite, bomber.opacity, active_bombers, player.bomber
 def itor_dead_bomber_process(corpse):
     const age = mode_frames - corpse.death_time
     if age > 180:
@@ -324,7 +324,7 @@ def add_child_explosion(parent, dir):
     // cell as the box and trigger the box-destruction process.
     let child_range = parent.range - 1
     const icell = map_pos_to_cell(child_pos)
-    if box_grid[icell.x][icell.y]:
+    if box_grid[icell.x][icell.y] or powerup_grid[icell.x][icell.y]:
         child_range = 0
     push(explosions, make_entity({
         pos: child_pos,
@@ -340,7 +340,7 @@ def add_child_explosion(parent, dir):
 
 // Grow explosions, adding new explosion entities to the end of the array.
 // RO: map, mode_frames, expl.pos, expl.born_frames, expl.grow_time,
-//     expl.is_center, expl.grow_dir, expl.duration, box_grid
+//     expl.is_center, expl.grow_dir, expl.duration, box_grid, powerup_grid
 // RW: expl.sprite, expl.range
 def grow_explosions(explosions):
     const explosion_count = size(explosions)
@@ -392,13 +392,83 @@ def itor_box_break(box):
 // Destroy breaking boxes once the explosion is gone
 // target: boxes
 // RO: explosion_grid, bbox.pos
-// RW: breaking_boxes, box_grid
+// RW: breaking_boxes, box_grid, powerups
 def itor_breaking_box_destroy(bbox):
     const icell = map_pos_to_cell(bbox.pos)
     if not explosion_grid[icell.x][icell.y]:
         box_grid[icell.x][icell.y] = false
-        // TODO: spawn power-up
+        // sometimes, spawn a power-up!
+        const roll = ξ
+        if roll < 0.2:
+            push(powerups, make_entity({
+                sprite:map_tiles_sprite[2][3], // +bombs
+                pos:bbox.pos,
+                inc_bombs: 1,
+                size: xy(14,14),
+                z:bbox.z
+                }))
+        else if roll < 0.4:
+            push(powerups, make_entity({
+                sprite:map_tiles_sprite[3][3], // +range
+                pos:bbox.pos,
+                inc_range: 1,
+                size: xy(14,14),
+                z:bbox.z
+                }))
         return iterate.REMOVE
+
+// POWER-UPS
+// - power-ups do not block movement. They disappear when touched, and the first player to touch them
+//   gets the power-up.
+// - power-ups DO block bomb explosions, just like boxes. An explosion that would pass through a power-up
+//   stops instead.
+// - power-ups ARE destroyed by bomb explosions, just like boxes. There is no visual indication (unlike
+//   boxes, which switch to a breaking box sprite when struck by an explosion). But once the explosion is
+//   cleared from a cell, any power-ups in that cell are removed as well.
+// - Collecting a power-up while it's being destroyed by a bomb? Test in xblast, but the easiest answer
+//   would be "you collect the power-up, and then instantly you're in a cell with an explosion and you die",
+//   which is probably fine.
+//   - xblast explosions disappear VERY quickly once they reach full radius, so it's difficult to test.
+
+// Add all powerup entities to the powerup_grid
+// target: powerups
+// RO: pup.pos
+// RW: powerup_grid
+def itor_powerup_populate_grid(pup):
+    const icell = map_pos_to_cell(pup.pos)
+    powerup_grid[icell.x][icell.y] = true
+
+// Handle powerups that are touched by players
+// target: powerups
+// RO: pup.pos, pup.shape, bomber.pos, bomber.shape, pup.inc_bombs, pup.inc_range
+// RW: powerups, active_bomber.max_active_bomb_count
+def itor_powerup_pickup(pup):
+    for bomber in active_bombers:
+        if overlaps(pup, bomber):
+            bomber.max_active_bomb_count += if pup.inc_bombs then pup.inc_bombs else 0
+            bomber.bomb_range += if pup.inc_range then pup.inc_range else 0
+            return iterate.REMOVE
+
+// Break powerups that have been hit by explosions.
+// target: powerups
+// RO: explosion_grid, pup.pos
+// RW: pup.broken
+def itor_powerup_break(pup):
+    const icell = map_pos_to_cell(pup.pos)
+    if explosion_grid[icell.x][icell.y]:
+        pup.broken = true
+
+// Destroy breaking powerups once the explosion is gone
+// target: powerups
+// RO: explosion_grid, pup.pos, pup.broken
+// RW: powerups, powerup_grid
+def itor_powerup_destroy(pup):
+    if pup.broken:
+        const icell = map_pos_to_cell(pup.pos)
+        if not explosion_grid[icell.x][icell.y]:
+            powerup_grid[icell.x][icell.y] = false
+            return iterate.REMOVE
+
 
 // GLOBALS
 let map = nil
@@ -413,6 +483,8 @@ let explosion_grid = []
 let boxes = []
 let breaking_boxes = []
 let box_grid = []
+let powerups = []
+let powerup_grid = []
 
 enter
 ────────────────────────────────────────────────────────────────────────
@@ -430,6 +502,8 @@ explosion_grid = []
 boxes = []
 breaking_boxes = []
 box_grid = []
+powerups = []
+powerup_grid = []
 
 // Search map for starting cells, so we can look them up by player index
 let player_start_icells = []
@@ -491,6 +565,12 @@ iterate(explosions, itor_explosion_populate_grid)
 // break boxes hit by explosions
 iterate(boxes, itor_box_break)
 iterate(breaking_boxes, itor_breaking_box_destroy)
+// process powerups, which may also be destroyed by explosions
+powerup_grid = make_array2d(map.size.x, map.size.y, false)
+iterate(powerups, itor_powerup_populate_grid)
+iterate(powerups, itor_powerup_pickup)
+iterate(powerups, itor_powerup_break)
+iterate(powerups, itor_powerup_destroy)
 // Populate the bomb grid, including placing new bombs
 bomb_grid = make_array2d(map.size.x, map.size.y, false)
 iterate(bombs, itor_bomb_populate_grid)
@@ -514,3 +594,4 @@ preserving_transform:
     iterate(dead_bombers, draw_entity)
     iterate(boxes, draw_entity)
     iterate(breaking_boxes, draw_entity)
+    iterate(powerups, draw_entity)
