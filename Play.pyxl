@@ -477,6 +477,10 @@ for p < size(players): // TODO: use player count
 frame
 ────────────────────────────────────────────────────────────────────────
 
+const LIVES_STR = ["   ", "*  ", "** ", "***"]
+draw_text({font:font, pos:xy(2% SCREEN_SIZE.x, 10% SCREEN_SIZE.y), text:"P1 " + LIVES_STR[players[0].lives], x_align:"left", color:#f5a})
+draw_text({font:font, pos:xy(98% SCREEN_SIZE.x, 10% SCREEN_SIZE.y), text:"P2 " + LIVES_STR[players[1].lives], x_align:"right", color:#0af})
+
 // Explode bombs, potentially creating explosions
 iterate(bombs, itor_bomb_explode)
 // grow and fade explosions
