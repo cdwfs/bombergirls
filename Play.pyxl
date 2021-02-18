@@ -84,7 +84,7 @@ def make_bomber_entity(player_index):
     return make_entity({
         sprite_sheet: sprite_sheet,
         sprite: sprite_sheet[0][0],
-        pos: BLOCK_SIZE * player_start_icells[player_index],
+        pos: BLOCK_SIZE * players[player_index].spawn_icell,
         gamepad: gamepad_array[player_index],
         vel: xy(0,0),
         next_vel: xy(0,0),
@@ -248,7 +248,8 @@ def itor_dead_bomber_process(corpse):
         // TODO: corpse has finally died, now what?
         let new_bomber = make_bomber_entity(corpse.player_index)
         push(active_bombers, new_bomber)
-        bomber_for_player[corpse.player_index] = new_bomber
+        players[corpse.player_index].bomber = new_bomber
+        players[corpse.player_index].lives = max(0, players[corpse.player_index].lives-1)
         return iterate.REMOVE
     let frame = floor(clamp((age-120)/5, 0, 3))
     corpse.sprite = death_sprite[frame][0]
@@ -402,10 +403,9 @@ def itor_breaking_box_destroy(bbox):
 // GLOBALS
 let map = nil
 let map_xform = xy(0,0)
-let bomber_for_player = []
+let players = []
 let active_bombers = []
 let dead_bombers = []
-let player_start_icells = []
 let bombs = []
 let bomb_grid = []
 let explosions = []
@@ -420,10 +420,9 @@ enter
 // Initialize mode variables
 map = deep_clone(template_map)
 map_xform = map_offset(map)
-bomber_for_player = []
+players = []
 active_bombers = []
 dead_bombers = []
-player_start_icells = []
 bombs = []
 bomb_grid = []
 explosions = []
@@ -433,6 +432,7 @@ breaking_boxes = []
 box_grid = []
 
 // Search map for starting cells, so we can look them up by player index
+let player_start_icells = []
 resize(player_start_icells, size(PLAYER_SPAWN_SPRITES))
 for mx < map.size.x:
     for my < map.size.y:
@@ -460,11 +460,19 @@ for mx < map.size.x:
             box_grid[icell.x][icell.y] = true
             set_map_sprite(map, icell, FLOOR_SPRITE)
 
-// Spawn bombers
+// Create players and bombers
 for p < 2: // TODO: use player count
+    // store a separate player object, for state that persists across lives
+    push(players, {
+        lives: 3,
+        spawn_icell: player_start_icells[p],
+        bomber: nil,
+        })
+for p < size(players): // TODO: use player count
+    // spawn bombers
     let bomber = make_bomber_entity(p)
     push(active_bombers, bomber)
-    push(bomber_for_player, bomber)
+    players[p].bomber = bomber
 
 frame
 ────────────────────────────────────────────────────────────────────────
