@@ -290,13 +290,14 @@ def itor_bomb_explode(bomb):
     const icell = map_pos_to_cell(bomb.pos)
     if ttl ≤ 0 or explosion_grid[icell.x][icell.y]:
         // explode
+        const GROW_TIME = 5
         push(explosions, make_entity({
             pos: bomb.pos,
             born_frames: mode_frames,
             range: bomb.range, // how many child exposions to spawn in each direction (0+)
             is_center: true,
-            duration: 60, // how long before this explosion disappears
-            grow_time: 5, // how long before this explosion grows
+            duration: (bomb.range+4)*GROW_TIME, // how long before this explosion disappears
+            grow_time: GROW_TIME, // how long before this explosion grows
             sprite: map_tiles_sprite[0][2],
             z: 2,
             }))
