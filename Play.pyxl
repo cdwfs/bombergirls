@@ -24,6 +24,10 @@ const DIR_E = 2
 const DIR_N = 3
 const OFFSET_FOR_DIR = [xy(0,1), xy(-1,0), xy(1,0), xy(0,-1)]
 
+def enter_postgame_mode(data):
+    reset_post_effects()
+    set_mode(PostGame) because "Game ended"
+
 def map_offset(m):
     const screen_size_in_blocks = SCREEN_SIZE / BLOCK_SIZE
     const map_size_in_blocks = map.size
@@ -207,6 +211,7 @@ def itor_active_bomber_place_bomb(bomber):
         return
     const icell = map_pos_to_cell(bomber.pos)
     if bomber.gamepad.aa and is_cell_empty(bomber.pos) and not bomb_grid[icell.x][icell.y]:
+        play_sound(SND_BOMB_PLACE)
         push(bombs, make_entity({
             sprite: BOMB_SPRITE,
             pos: BLOCK_SIZE*icell,
@@ -227,6 +232,8 @@ def itor_active_bomber_place_bomb(bomber):
 def itor_active_bomber_kill(bomber):
     const icell = map_pos_to_cell(bomber.pos)
     if explosion_grid[icell.x][icell.y]:
+        play_sound(SND_BOMBER_DEATH)
+        delay(play_sound, 120, SND_BOMBER_DEATH2)
         push(dead_bombers, make_entity({
             pos: bomber.pos,
             sprite: death_sprite[0][0],
@@ -241,15 +248,21 @@ def itor_active_bomber_kill(bomber):
 // Process a dead bomber
 // target: dead_bombers
 // RO: bomber.death_time, bomber.player_index
-// RW: bomber.sprite, bomber.opacity, active_bombers, player.bomber
+// RW: bomber.sprite, bomber.opacity, active_bombers, player.bomber, player.eliminated
 def itor_dead_bomber_process(corpse):
     const age = mode_frames - corpse.death_time
     if age > 180:
-        // TODO: corpse has finally died, now what?
-        let new_bomber = make_bomber_entity(corpse.player_index)
-        push(active_bombers, new_bomber)
-        players[corpse.player_index].bomber = new_bomber
-        players[corpse.player_index].lives = max(0, players[corpse.player_index].lives-1)
+        // corpse has finally died
+        const player = players[corpse.player_index]
+        if player.lives == 0:
+            // player is out of lives
+            player.eliminated = true
+        else:
+            // spawn new bomber for this player
+            player.lives = max(0, player.lives-1)
+            let new_bomber = make_bomber_entity(corpse.player_index)
+            push(active_bombers, new_bomber)
+            player.bomber = new_bomber
         return iterate.REMOVE
     let frame = floor(clamp((age-120)/5, 0, 3))
     corpse.sprite = death_sprite[frame][0]
@@ -290,6 +303,7 @@ def itor_bomb_explode(bomb):
     const icell = map_pos_to_cell(bomb.pos)
     if ttl ≤ 0 or explosion_grid[icell.x][icell.y]:
         // explode
+        play_sound(SND_BOMB_EXPLODE)
         const GROW_TIME = 5
         push(explosions, make_entity({
             pos: bomb.pos,
@@ -383,6 +397,7 @@ def itor_explosion_fade_out(expl):
 def itor_box_break(box):
     const icell = map_pos_to_cell(box.pos)
     if explosion_grid[icell.x][icell.y]:
+        play_sound(SND_BOX_BREAK)
         push(breaking_boxes, make_entity({
             sprite: map_tiles_sprite[1][3],
             pos: box.pos,
@@ -446,6 +461,7 @@ def itor_powerup_populate_grid(pup):
 def itor_powerup_pickup(pup):
     for bomber in active_bombers:
         if overlaps(pup, bomber):
+            play_sound(SND_POWERUP_PICKUP)
             bomber.max_active_bomb_count += if pup.inc_bombs then pup.inc_bombs else 0
             bomber.bomb_range += if pup.inc_range then pup.inc_range else 0
             return iterate.REMOVE
@@ -506,6 +522,11 @@ box_grid = []
 powerups = []
 powerup_grid = []
 
+// In debug mode, we bypass the main menu and jump straight to play mode.
+// Set reasonable defaults.
+if get_previous_mode() == ∅:
+    debug_print("Debug mode!")
+
 // Search map for starting cells, so we can look them up by player index
 let player_start_icells = []
 resize(player_start_icells, size(PLAYER_SPAWN_SPRITES))
@@ -548,6 +569,7 @@ for p < size(players): // TODO: use player count
     let bomber = make_bomber_entity(p)
     push(active_bombers, bomber)
     players[p].bomber = bomber
+    players[p].lives -= 1
 
 frame
 ────────────────────────────────────────────────────────────────────────
@@ -556,6 +578,7 @@ const LIVES_STR = ["   ", "*  ", "** ", "***"]
 draw_text({font:font, pos:xy(2% SCREEN_SIZE.x, 10% SCREEN_SIZE.y), text:"P1 " + LIVES_STR[players[0].lives], x_align:"left", color:#f5a})
 draw_text({font:font, pos:xy(98% SCREEN_SIZE.x, 10% SCREEN_SIZE.y), text:"P2 " + LIVES_STR[players[1].lives], x_align:"right", color:#0af})
 
+// SIMULATE
 // Explode bombs, potentially creating explosions
 iterate(bombs, itor_bomb_explode)
 // grow and fade explosions
@@ -584,6 +607,17 @@ iterate(active_bombers, itor_active_bomber_move)
 // misc animation processing
 iterate(dead_bombers, itor_dead_bomber_process)
 iterate(bombs, itor_bomb_animate)
+// Check for victory condition
+let players_remaining = 0
+debug_watch(players)
+for player in players:
+    if not player.eliminated:
+        players_remaining += 1
+if players_remaining ≤ 1:
+    add_frame_hook(fade_out, enter_postgame_mode, 30, ∅, {})
+
+
+// DRAW
 preserving_transform:
     set_transform(map_xform)
     draw_map({map:map})
@@ -596,3 +630,6 @@ preserving_transform:
     iterate(boxes, draw_entity)
     iterate(breaking_boxes, draw_entity)
     iterate(powerups, draw_entity)
+
+leave
+────────────────────────────────────────────────────────────────────────

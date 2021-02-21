@@ -1,0 +1,70 @@
+Menu
+════════════════════════════════════════════════════════════════════════
+const MENU_NEW_GAME = 0
+const MENU_HELP = 1
+const MENU_CREDITS = 2
+const MENU_ITEMS = ["New Game", "Help", "Credits"]
+
+const MENU_ITEM_TEXT_ARGS = {font:font, color:#f, x_align:"left"}
+const MENU_CURSOR_TEXT_ARGS = {font:font, text:replace("(a)", gamepad_array[0].prompt), x_align:"right", color:#f}
+
+def enter_pregame_mode(data):
+    reset_post_effects()
+    set_mode(PreGame) because "Choose PreGame from menu"
+def enter_help_mode(data):
+    reset_post_effects()
+    set_mode(Help) because "Choose Help from menu"
+def enter_credits_mode(data):
+    reset_post_effects()
+    set_mode(Credits) because "Choose Credits from menu"
+
+let current_menu_item = MENU_NEW_GAME
+let disable_input = false
+
+enter
+────────────────────────────────────────────────────────────────────────
+current_menu_item = MENU_NEW_GAME
+disable_input = false
+
+if not bgm_is_playing():
+    bgm_start()
+
+frame
+────────────────────────────────────────────────────────────────────────
+// Handle cursor movement
+if not disable_input and gamepad_array[0].yy ≠ 0:
+    play_sound(SND_CURSOR_MOVE)
+    current_menu_item = (current_menu_item + size(MENU_ITEMS) + gamepad_array[0].yy) % size(MENU_ITEMS)
+
+// Handle menu selection
+if not disable_input and gamepad_array[0].aa ≠ 0:
+    if current_menu_item == MENU_NEW_GAME:
+        disable_input = true
+        play_sound(SND_CURSOR_ACCEPT)
+        add_frame_hook(fade_out, enter_pregame_mode, 30, ∅, {})
+    else if current_menu_item == MENU_HELP:
+        play_sound(SND_CURSOR_ACCEPT)
+        add_frame_hook(fade_out, enter_help_mode, 30, nil, {})
+    else if current_menu_item == MENU_CREDITS:
+        play_sound(SND_CURSOR_ACCEPT)
+        add_frame_hook(fade_out, enter_credits_mode, 30, nil, {})
+
+// Draw splash screen
+//draw_sprite({sprite:title_sprite, pos:xy(0.5,0.25)*SCREEN_SIZE})
+const title_pos = xy(50% SCREEN_SIZE.x, 25% SCREEN_SIZE.y)
+draw_text({font:font, x_align:"center", pos:title_pos,
+    color:#ff0, text:"Bombergirls"})
+const title_offsets = [xy(1,0),xy(1,1),xy(0,1),xy(-1,1),xy(-1,0),xy(-1,-1),xy(0,-1),xy(1,-1)]
+draw_text({font:font, x_align:"center", pos:title_pos + array_value(title_offsets, mode_frames/3, "loop"),
+    color:#840, text:"Bombergirls", z:-1})
+    
+
+let menu_offset = xy(45% SCREEN_SIZE.x, 50% SCREEN_SIZE.y)
+for menu_item at i in MENU_ITEMS:
+    let dy = draw_text({text:menu_item, pos:menu_offset, ...MENU_ITEM_TEXT_ARGS}).y
+    if current_menu_item == i:
+        draw_text({pos:menu_offset - xy(10,0), ...MENU_CURSOR_TEXT_ARGS})
+    menu_offset.y += dy
+
+leave
+────────────────────────────────────────────────────────────────────────

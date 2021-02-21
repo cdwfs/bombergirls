@@ -1,0 +1,28 @@
+const SND_CURSOR_MOVE = {sound:coin_01_sound, volume: 100%}
+const SND_CURSOR_ACCEPT = {sound:coin_00_sound, pitch:94.38%, volume: 100%}
+const SND_CURSOR_BACK = {sound:coin_07_sound, volume: 100%}
+const SND_BGMUSIC = {sound:loop_built_this_sound, volume:70%, loop:true}
+const SND_BOMB_PLACE = {sound:hit_02_sound, volume:100%}
+const SND_BOMB_EXPLODE = {sound:explode_08_sound, volume:50%}
+const SND_BOX_BREAK = {sound:explode_01_sound, volume:70%}
+const SND_POWERUP_PICKUP = {sound:coin_01_sound, volume: 100%}
+const SND_BOMBER_DEATH = {sound:wild_06_sound, volume: 100%}
+const SND_BOMBER_DEATH2 = {sound:sparks_02_sound, volume: 100%}
+
+// background music control
+let bgmusic = ∅
+def bgm_start():
+    bgmusic = play_sound(SND_BGMUSIC)
+def bgm_stop():
+    stop_audio(bgmusic)
+    bgmusic = ∅
+def bgm_is_playing():
+    return bgmusic ≠ ∅
+
+// Used to fade the screen to black during a mode transition
+def fade_out(frames_left, total_frames, data):
+    let t = 1-(total_frames - frames_left) / total_frames
+    set_post_effects({
+        color: rgb(t,t,t),
+        blend_mode: "multiply"
+        })

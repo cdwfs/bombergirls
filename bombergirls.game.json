@@ -4,11 +4,18 @@
     "copyright": "©2021 Cort Stratton",
     "license": "CC0/Public Domain (Replace with your own license)",
     "packages": [],
-    "scripts": [],
-    "modes": [
-        "Play"
+    "scripts": [
+        "globals.pyxl"
     ],
-    "start_mode": "Play",
+    "modes": [
+        "Play",
+        "Menu",
+        "PreGame",
+        "PostGame",
+        "Credits",
+        "Help"
+    ],
+    "start_mode": "Menu",
     "docs": [],
     "assets": {
         "font": "quad://fonts/deja-8.font.json",
@@ -19,7 +26,17 @@
         "mage_sprite": "quad://sprites/dawnlike-mage-16x16.sprite.json",
         "rogue_sprite": "quad://sprites/dawnlike-rogue-16x16.sprite.json",
         "warrior_sprite": "quad://sprites/dawnlike-warrior-16x16.sprite.json",
-        "death_sprite": "death.sprite.json"
+        "death_sprite": "death.sprite.json",
+        "coin_00_sound": "sounds/coin-01.sound.json",
+        "coin_01_sound": "sounds/coin-01.sound.json",
+        "coin_07_sound": "sounds/coin-07.sound.json",
+        "explode_08_sound": "sounds/explode-08.sound.json",
+        "loop_built_this_sound": "sounds/loop-built-this.sound.json",
+        "powerup_03_sound": "sounds/powerup-03.sound.json",
+        "hit_02_sound": "sounds/hit-02.sound.json",
+        "sparks_02_sound": "sounds/sparks-02.sound.json",
+        "explode_01_sound": "sounds/explode-01.sound.json",
+        "wild_06_sound": "sounds/wild-06.sound.json"
     },
     "version": 0,
     "min_players": 2,

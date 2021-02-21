@@ -1,0 +1,35 @@
+PreGame
+════════════════════════════════════════════════════════════════════════
+def enter_menu_mode(data):
+    reset_post_effects()
+    set_mode(Menu) because "Returned to main menu"
+def enter_play_mode(data):
+    reset_post_effects()
+    set_mode(Play) because "Started the game"
+
+let disable_input = false
+    
+enter
+────────────────────────────────────────────────────────────────────────
+disable_input = false
+
+frame
+────────────────────────────────────────────────────────────────────────
+if not disable_input:
+    // Push A to start the game
+    if gamepad_array[0].aa:
+        disable_input = true
+        play_sound(SND_CURSOR_ACCEPT)
+        add_frame_hook(fade_out, enter_play_mode, 30, ∅, {})
+    // Push B to go back to the main menu
+    else if gamepad_array[0].bb:
+        disable_input = true
+        play_sound(SND_CURSOR_BACK)
+        add_frame_hook(fade_out, enter_menu_mode, 30, ∅, {})
+        
+// Draw the input prompts
+draw_text({font:font, pos:xy(25% SCREEN_SIZE.x, 90% SCREEN_SIZE.y),
+    text:replace("(b) Return To Menu    (a) Start Game", gamepad_array[0].prompt), color:#f})
+
+leave
+────────────────────────────────────────────────────────────────────────
