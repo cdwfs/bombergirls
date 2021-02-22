@@ -1,35 +1,170 @@
 PreGame
 ════════════════════════════════════════════════════════════════════════
+
+const PLAYER_STATE_INACTIVE = "INACTIVE"
+const PLAYER_STATE_ACTIVE = "ACTIVE"
+const PLAYER_STATE_READY = "READY"
+const ALL_BOMBER_SPRITES = [
+    engineer_sprite,
+    mage_sprite,
+    rogue_sprite,
+    warrior_sprite,
+]
 def enter_menu_mode(data):
     reset_post_effects()
     set_mode(Menu) because "Returned to main menu"
 def enter_play_mode(data):
     reset_post_effects()
-    set_mode(Play) because "Started the game"
+    const player_infos = [∅,∅,∅,∅]
+    for i < size(players):
+        if players[i].state == PLAYER_STATE_READY:
+            player_infos[i] = {
+                gamepad: players[i].pad, // includes player index in gamepad.index
+                sprite_sheet: ALL_BOMBER_SPRITES[players[i].bomber_index],
+            }
+    set_mode(Play, player_infos) because "Started the game"
 
+let players = [∅,∅,∅,∅]
 let disable_input = false
+let countdown_timer = nil
     
 enter
 ────────────────────────────────────────────────────────────────────────
+players = [∅,∅,∅,∅]
 disable_input = false
+countdown_timer = nil
+
+const PLAYER_TRANSFORMS = [
+    xy(0,0),
+    xy(50% SCREEN_SIZE.x,0),
+    xy(0,50% SCREEN_SIZE.y),
+    xy(50% SCREEN_SIZE.x, 50% SCREEN_SIZE.y),
+]
+for i < 4:
+    players[i] = {
+        state:PLAYER_STATE_INACTIVE,
+        label: "Player " + (i+1),
+        color: PLAYER_COLORS[i],
+        xform: PLAYER_TRANSFORMS[i],
+        bomber_index: 0,
+        pad: gamepad_array[i],
+    }
 
 frame
 ────────────────────────────────────────────────────────────────────────
-if not disable_input:
-    // Push A to start the game
-    if gamepad_array[0].aa:
-        disable_input = true
-        play_sound(SND_CURSOR_ACCEPT)
-        add_frame_hook(fade_out, enter_play_mode, 30, ∅, {})
-    // Push B to go back to the main menu
-    else if gamepad_array[0].bb:
-        disable_input = true
-        play_sound(SND_CURSOR_BACK)
-        add_frame_hook(fade_out, enter_menu_mode, 30, ∅, {})
-        
-// Draw the input prompts
-draw_text({font:font, pos:xy(25% SCREEN_SIZE.x, 90% SCREEN_SIZE.y),
-    text:replace("(b) Return To Menu    (a) Start Game", gamepad_array[0].prompt), color:#f})
+// The plan:
+// - all players start inactive
+// - if an inactive player presses A, they are activated.
+// - active players can customize their character with the dpad
+// - if an active player pushes B, they are deactivated.
+// - if an active player pushes A, they are "ready"
+// - if a ready player pushes B, they go back to the active state.
+// - if all players are ready, anyone can click A to start the game
 
+if not disable_input:
+    for i < size(players):
+        let player = players[i]
+        if player.state == PLAYER_STATE_INACTIVE:
+            if player.pad.aa:
+                play_sound(SND_CURSOR_ACCEPT)
+                player.state = PLAYER_STATE_ACTIVE
+                player.bomber_index = i
+        else if player.state == PLAYER_STATE_ACTIVE:
+            if player.pad.xx:
+                play_sound(SND_CURSOR_MOVE)
+                player.bomber_index = loop(player.bomber_index + player.pad.xx,
+                    size(ALL_BOMBER_SPRITES))
+            if player.pad.aa:
+                play_sound(SND_CURSOR_ACCEPT)
+                player.state = PLAYER_STATE_READY
+            else if player.pad.bb:
+                play_sound(SND_CURSOR_BACK)
+                player.state = PLAYER_STATE_INACTIVE
+        else if player.state == PLAYER_STATE_READY:
+            if player.pad.bb:
+                play_sound(SND_CURSOR_BACK)
+                player.state = PLAYER_STATE_ACTIVE
+
+    // Check for mode changes
+    let inactive_player_count = 0
+    let active_player_count = 0
+    let ready_player_count = 0
+    for player in players:
+        if player.state == PLAYER_STATE_INACTIVE:
+            inactive_player_count += 1
+        else if player.state == PLAYER_STATE_ACTIVE:
+            active_player_count += 1
+        else if player.state == PLAYER_STATE_READY:
+            ready_player_count += 1
+    // - if all players are inactive, anyone can push B to go back to the main menu
+    if inactive_player_count == 4:
+        if players[0].pad.bb or players[1].pad.bb or players[2].pad.bb or players[3].pad.bb:
+            disable_input = true
+            play_sound(SND_CURSOR_BACK)
+            add_frame_hook(fade_out, enter_menu_mode, 30, ∅, {})
+    // If at least two players are ready and all other players are inactive, start a
+    // countdown to enter play mode. Any player entering the ready state resets the timer.
+    if ready_player_count ≥ 2 and active_player_count == 0 and countdown_timer == ∅:
+        countdown_timer = 60*3
+    if countdown_timer ≠ ∅:
+        if countdown_timer > 0 and countdown_timer % 60 == 0:
+            play_sound(SND_COUNTDOWN_TICK)
+        --countdown_timer
+        if active_player_count > 0:
+            countdown_timer = ∅
+        if countdown_timer ≤ 0:
+            disable_input = true
+            play_sound(SND_BOMB_EXPLODE)
+            add_frame_hook(fade_out, enter_play_mode, 30, ∅, {})
+    debug_watch(countdown_timer)
+        
+// Draw each player's state
+const TEXT_PARAMS = {font:large_font, y_align:"top"}
+const text_alpha = clamp(0.5*sin(10*now())+0.5,0,1)
+const sprite_anim_frame = loop(floor(mode_frames/10), 4)
+for player in players:
+    const pad = player.pad
+    preserving_transform:
+        set_transform(player.xform)
+        draw_corner_rect({corner:xy(0,0), size:50% SCREEN_SIZE, color:75% player.color,z:-1})
+        draw_text({pos:xy(25% SCREEN_SIZE.x,5), x_align:"center", color:#f, shadow:25% player.color,
+            text:player.label, ...TEXT_PARAMS})
+        if player.state == PLAYER_STATE_INACTIVE:
+            draw_text({pos:xy(0.25,0.20)*SCREEN_SIZE, x_align:"center",
+                color:rgba(#fff, text_alpha),
+                shadow:rgba(25% player.color, text_alpha),
+                text:replace("Press (a) to join", pad.prompt), ...TEXT_PARAMS})            
+        else if player.state == PLAYER_STATE_ACTIVE:
+            draw_rect({color:25% player.color, pos:25% SCREEN_SIZE, size:xy(64,32)})
+            draw_text({text:replace("[<]", pad.prompt), color:#f, font:large_font,
+                x_align:"center", y_align:"center", pos:25% SCREEN_SIZE - xy(16,0)})
+            draw_sprite({
+                pos:25% SCREEN_SIZE,
+                sprite:ALL_BOMBER_SPRITES[player.bomber_index][sprite_anim_frame][0],
+                })
+            draw_text({text:replace("[>]", pad.prompt), color:#f, font:large_font,
+                x_align:"center", y_align:"center", pos:25% SCREEN_SIZE + xy(16,0)})
+            draw_text({font:font, pos:xy(25% SCREEN_SIZE.x, 47% SCREEN_SIZE.y), shadow:25% player.color,
+                x_align:"center", text:replace("(b) Back   (a) Ready!", pad.prompt),
+                color:#f})
+        else if player.state == PLAYER_STATE_READY:
+            const pad = player.pad
+            draw_rect({color:25% player.color, pos:25% SCREEN_SIZE, size:xy(64,32)})
+            draw_sprite({
+                pos:25% SCREEN_SIZE,
+                sprite:ALL_BOMBER_SPRITES[player.bomber_index][sprite_anim_frame][0],
+                })
+            draw_text({font:font, pos:xy(25% SCREEN_SIZE.x, 47% SCREEN_SIZE.y), shadow:25% player.color,
+                x_align:"center", text:replace("(b) Back", pad.prompt),
+                color:#f})
+    // Draw countdown if all players are ready
+    if countdown_timer ≠ ∅:
+        draw_rect({pos:50% SCREEN_SIZE, color:#888, size:xy(SCREEN_SIZE.x, 64)})
+        const secs = ceil(countdown_timer/60)
+        draw_text({font:large_font, pos:50% SCREEN_SIZE, x_align:"center", y_align:"center", color:#f,
+            text:"Starting in " + secs})
+        for i < secs:
+            draw_sprite({pos:50% SCREEN_SIZE + xy(64+16*i,0), sprite:BOMB_SPRITE})
+            draw_sprite({pos:50% SCREEN_SIZE - xy(64+16*i,0), sprite:BOMB_SPRITE})
 leave
 ────────────────────────────────────────────────────────────────────────

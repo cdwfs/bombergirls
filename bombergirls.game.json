@@ -18,7 +18,6 @@
     "start_mode": "Menu",
     "docs": [],
     "assets": {
-        "font": "quad://fonts/deja-8.font.json",
         "engineer_sprite": "quad://sprites/dawnlike-engineer-16x16.sprite.json",
         "map_tiles_sprite": "map-tiles.sprite.json",
         "template_map": "template.map.json",
@@ -36,7 +35,10 @@
         "hit_02_sound": "sounds/hit-02.sound.json",
         "sparks_02_sound": "sounds/sparks-02.sound.json",
         "explode_01_sound": "sounds/explode-01.sound.json",
-        "wild_06_sound": "sounds/wild-06.sound.json"
+        "wild_06_sound": "sounds/wild-06.sound.json",
+        "font": "quad://fonts/weaver-7.font.json",
+        "large_font": "quad://fonts/weaver-10.font.json",
+        "blip_15_sound": "quad://sounds/blip-15.sound.json"
     },
     "version": 0,
     "min_players": 2,

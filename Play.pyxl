@@ -2,14 +2,6 @@ Play
 ════════════════════════════════════════════════════════════════════════
 
 const BLOCK_SIZE = xy(16,16)
-const PLAYER_SPRITE_SHEETS = [
-    engineer_sprite,
-    mage_sprite,
-    rogue_sprite,
-    warrior_sprite,
-]
-const BOMB_SPRITE = blocks_sprite[5][15]
-const BOMB_FLASH_SPRITE = blocks_sprite[6][15]
 const PLAYER_SPAWN_SPRITES = [
     map_tiles_sprite.start_p1,
     map_tiles_sprite.start_p2,
@@ -83,18 +75,17 @@ def is_dpad_pressed(gamepad):
     // while dpad is in one direction.
     return (gamepad.xx or gamepad.yy) or (gamepad.x or gamepad.y)
 
-def make_bomber_entity(player_index):
-    const sprite_sheet = PLAYER_SPRITE_SHEETS[player_index]
+def make_bomber_entity(player):
     return make_entity({
-        sprite_sheet: sprite_sheet,
-        sprite: sprite_sheet[0][0],
-        pos: BLOCK_SIZE * players[player_index].spawn_icell,
-        gamepad: gamepad_array[player_index],
+        sprite_sheet: player.sprite_sheet,
+        sprite: player.sprite_sheet[0][0],
+        pos: BLOCK_SIZE * player.spawn_icell,
+        gamepad: player.gamepad,
+        player: player,
         vel: xy(0,0),
         next_vel: xy(0,0),
         dir: DIR_S,
         speed: 1,
-        player_index: player_index,
         bomb_range: 1,
         max_active_bomb_count: 1,
         active_bomb_count: 0,
@@ -239,7 +230,7 @@ def itor_active_bomber_kill(bomber):
             sprite: death_sprite[0][0],
             z: bomber.z,
             death_time: mode_frames,
-            player_index: bomber.player_index
+            player: bomber.player,
             }))
         return iterate.REMOVE
 
@@ -247,20 +238,20 @@ def itor_active_bomber_kill(bomber):
 
 // Process a dead bomber
 // target: dead_bombers
-// RO: bomber.death_time, bomber.player_index
+// RO: bomber.death_time, bomber.player
 // RW: bomber.sprite, bomber.opacity, active_bombers, player.bomber, player.eliminated
 def itor_dead_bomber_process(corpse):
     const age = mode_frames - corpse.death_time
     if age > 180:
         // corpse has finally died
-        const player = players[corpse.player_index]
+        const player = corpse.player
         if player.lives == 0:
             // player is out of lives
             player.eliminated = true
         else:
             // spawn new bomber for this player
             player.lives = max(0, player.lives-1)
-            let new_bomber = make_bomber_entity(corpse.player_index)
+            let new_bomber = make_bomber_entity(corpse.player)
             push(active_bombers, new_bomber)
             player.bomber = new_bomber
         return iterate.REMOVE
@@ -503,7 +494,7 @@ let box_grid = []
 let powerups = []
 let powerup_grid = []
 
-enter
+enter(player_infos)
 ────────────────────────────────────────────────────────────────────────
 
 // Initialize mode variables
@@ -557,19 +548,25 @@ for mx < map.size.x:
             set_map_sprite(map, icell, FLOOR_SPRITE)
 
 // Create players and bombers
-for p < 2: // TODO: use player count
+for info in player_infos:
+    if info == ∅:
+        continue
+    const player_index = info.gamepad.index
     // store a separate player object, for state that persists across lives
     push(players, {
         lives: 3,
-        spawn_icell: player_start_icells[p],
+        spawn_icell: player_start_icells[player_index],
+        sprite_sheet: info.sprite_sheet,
+        gamepad: info.gamepad,
         bomber: nil,
         })
-for p < size(players): // TODO: use player count
+debug_watch(players)
+for player in players:
     // spawn bombers
-    let bomber = make_bomber_entity(p)
+    let bomber = make_bomber_entity(player)
     push(active_bombers, bomber)
-    players[p].bomber = bomber
-    players[p].lives -= 1
+    player.bomber = bomber
+    player.lives -= 1
 
 frame
 ────────────────────────────────────────────────────────────────────────

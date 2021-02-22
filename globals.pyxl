@@ -8,6 +8,12 @@ const SND_BOX_BREAK = {sound:explode_01_sound, volume:70%}
 const SND_POWERUP_PICKUP = {sound:coin_01_sound, volume: 100%}
 const SND_BOMBER_DEATH = {sound:wild_06_sound, volume: 100%}
 const SND_BOMBER_DEATH2 = {sound:sparks_02_sound, volume: 100%}
+const SND_COUNTDOWN_TICK = {sound:blip_15_sound, volume: 100%}
+
+const PLAYER_COLORS = [#f5a, #0af, #fd3, #4e4]
+
+const BOMB_SPRITE = blocks_sprite[5][15]
+const BOMB_FLASH_SPRITE = blocks_sprite[6][15]
 
 // background music control
 let bgmusic = ∅
