@@ -18,6 +18,7 @@ const OFFSET_FOR_DIR = [xy(0,1), xy(-1,0), xy(1,0), xy(0,-1)]
 
 def enter_postgame_mode(data):
     reset_post_effects()
+    remove_frame_hooks_by_mode(Play)
     set_mode(PostGame) because "Game ended"
 
 def map_offset(m):
