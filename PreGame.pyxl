@@ -129,7 +129,7 @@ for player in players:
     preserving_transform:
         set_transform(player.xform)
         draw_corner_rect({corner:xy(0,0), size:50% SCREEN_SIZE, color:75% player.color,z:-1})
-        draw_text({pos:xy(25% SCREEN_SIZE.x,5), x_align:"center", color:#f, shadow:25% player.color,
+        draw_text({pos:xy(25% SCREEN_SIZE.x,16), x_align:"center", color:#f, shadow:25% player.color,
             text:player.label, ...TEXT_PARAMS})
         if player.state == PLAYER_STATE_INACTIVE:
             draw_text({pos:xy(0.25,0.20)*SCREEN_SIZE, x_align:"center",
@@ -137,7 +137,7 @@ for player in players:
                 shadow:rgba(25% player.color, text_alpha),
                 text:replace("Press (a) to join", pad.prompt), ...TEXT_PARAMS})            
         else if player.state == PLAYER_STATE_ACTIVE:
-            draw_rect({color:25% player.color, pos:25% SCREEN_SIZE, size:xy(64,32)})
+            draw_rect({color:25% player.color, pos:25% SCREEN_SIZE, size:xy(64,24)})
             draw_text({text:replace("[<]", pad.prompt), color:#f, font:large_font,
                 x_align:"center", y_align:"center", pos:25% SCREEN_SIZE - xy(16,0)})
             draw_sprite({
@@ -146,22 +146,22 @@ for player in players:
                 })
             draw_text({text:replace("[>]", pad.prompt), color:#f, font:large_font,
                 x_align:"center", y_align:"center", pos:25% SCREEN_SIZE + xy(16,0)})
-            draw_text({font:font, pos:xy(25% SCREEN_SIZE.x, 47% SCREEN_SIZE.y), shadow:25% player.color,
+            draw_text({font:font, pos:xy(25% SCREEN_SIZE.x, 25% SCREEN_SIZE.y+32), shadow:25% player.color,
                 x_align:"center", text:replace("(b) Back   (a) Ready!", pad.prompt),
                 color:#f})
         else if player.state == PLAYER_STATE_READY:
             const pad = player.pad
-            draw_rect({color:25% player.color, pos:25% SCREEN_SIZE, size:xy(64,32)})
+            draw_rect({color:25% player.color, pos:25% SCREEN_SIZE, size:xy(64,24)})
             draw_sprite({
                 pos:25% SCREEN_SIZE,
                 sprite:ALL_BOMBER_SPRITES[player.bomber_index][sprite_anim_frame][0],
                 })
-            draw_text({font:font, pos:xy(25% SCREEN_SIZE.x, 47% SCREEN_SIZE.y), shadow:25% player.color,
+            draw_text({font:font, pos:xy(25% SCREEN_SIZE.x, 25% SCREEN_SIZE.y+32), shadow:25% player.color,
                 x_align:"center", text:replace("(b) Back", pad.prompt),
                 color:#f})
     // Draw countdown if all players are ready
     if countdown_timer ≠ ∅:
-        draw_rect({pos:50% SCREEN_SIZE, color:#888, size:xy(SCREEN_SIZE.x, 64)})
+        draw_rect({pos:50% SCREEN_SIZE, color:#888, size:xy(SCREEN_SIZE.x, 32)})
         const secs = ceil(countdown_timer/60)
         draw_text({font:large_font, pos:50% SCREEN_SIZE, x_align:"center", y_align:"center", color:#f,
             text:"Starting in " + secs})
