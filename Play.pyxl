@@ -560,7 +560,6 @@ for info in player_infos:
         gamepad: info.gamepad,
         bomber: nil,
         })
-debug_watch(players)
 for player in players:
     // spawn bombers
     let bomber = make_bomber_entity(player)
@@ -606,7 +605,6 @@ iterate(dead_bombers, itor_dead_bomber_process)
 iterate(bombs, itor_bomb_animate)
 // Check for victory condition
 let players_remaining = 0
-debug_watch(players)
 for player in players:
     if not player.eliminated:
         players_remaining += 1
