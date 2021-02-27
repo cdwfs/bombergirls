@@ -9,6 +9,7 @@ const ALL_BOMBER_SPRITES = [
     mage_sprite,
     rogue_sprite,
     warrior_sprite,
+    penguin_sprite,
 ]
 def enter_menu_mode(data):
     reset_post_effects()

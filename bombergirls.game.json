@@ -38,7 +38,8 @@
         "wild_06_sound": "sounds/wild-06.sound.json",
         "font": "quad://fonts/weaver-7.font.json",
         "large_font": "quad://fonts/weaver-10.font.json",
-        "blip_15_sound": "quad://sounds/blip-15.sound.json"
+        "blip_15_sound": "quad://sounds/blip-15.sound.json",
+        "penguin_sprite": "penguin.sprite.json"
     },
     "version": 0,
     "min_players": 2,
