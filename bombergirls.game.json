@@ -49,6 +49,12 @@
     "achievements": false,
     "highscores": false,
     "description": "You know what game this is. Don't make me say it out loud.",
-    "constants": {},
+    "constants": {
+        "DEBUG_AI": {
+            "type": "boolean",
+            "value": false,
+            "description": "If true, draw some extra debug data pertaining to AI processing"
+        }
+    },
     "screenshot_tag": "Starter Example"
 }

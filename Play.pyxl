@@ -93,6 +93,20 @@ def make_bomber_entity(player):
         active_bomb_count: 0,
         })
 
+// Construct a dummy gamepad object for use by AI players.
+def make_dummy_gamepad(player_index):
+    return {
+        x:0,
+        y:0,
+        xx:0,
+        yy:0,
+        a:0,
+        b:0,
+        aa:0,
+        bb:0,
+        index:player_index,
+        }
+
 // ACTIVE BOMBERS
 
 // Record which cells have active bombers in them
@@ -489,7 +503,134 @@ def itor_powerup_destroy(pup):
             powerup_grid[icell.x][icell.y] = ∅
             return iterate.REMOVE
 
+// PATHFINDING/AI
 
+// Determine which cells are currently threatened by bombs/explosions. The AI will attempt to avoid
+// these cells.
+// target: threats (bombs + explosion centers)
+// RO: map, threat.pos, threat.range, box_grid, powerup_grid,
+// RW: is_threatened_grid
+def populate_is_threatened_grid():
+    // Helper iterator function
+    def itor_threat_populate_is_threatened_grid(threat):
+        const icell = map_pos_to_cell(threat.pos)
+        is_threatened_grid[icell.x][icell.y] = true
+        for offset in OFFSET_FOR_DIR:
+            for 1 ≤ d ≤ threat.range:
+                const c = icell + d*offset
+                // Implicitly assume that the map is surrounded by walls at the edges, so no need for a bounds check.
+                if not get_map_sprite(map, c, 0).can_walk:
+                    break // walls block explosions.
+                else if box_grid[c.x][c.y]:
+                    break // boxes block explosions
+                else if powerup_grid[c.x][c.y]:
+                    // powerups block explosions from progressing, but are walkable,
+                    // so the cell with the powerup is still considered threatened.
+                    is_threatened_grid[c.x][c.y] = true
+                    break
+                else:
+                    // this cell is threatened
+                    is_threatened_grid[c.x][c.y] = true
+    let threats = clone(bombs)
+    for expl in explosions:
+        if expl.is_center:
+            push(threats, expl)
+    iterate(threats, itor_threat_populate_is_threatened_grid)
+    
+// Compute the cost to enter each map cell. This cost does NOT take into account threatened cells,
+// which naturally should not be pathed through.
+// RO: map, box_grid, bomb_grid
+// RW: walk_cost_grid
+def populate_walk_cost_grid():
+    for x < map.size.x:
+        for y < map.size.y:
+            if not get_map_sprite(map, xy(x,y), 0).can_walk:
+                walk_cost_grid[x][y] = ∞ // unwalkable cells are...unwalkable
+            else if box_grid[x][y] or bomb_grid[x][y]:
+                walk_cost_grid[x][y] = ∞ // bombs and boxes block movement
+            else:
+                walk_cost_grid[x][y] = 1 // all clear
+// Find the closest reachable safe cell from the current position. Return the direction to
+// walk towards that cell.
+// RO: map, walk_cost_grid, is_threatened_grid
+def dir_to_nearest_safe_cell(start_cell):
+    if not is_threatened_grid[start_cell.x][start_cell.y]:
+        return xy(0,0)
+    let seen_grid = make_array2d(map.size.x, map.size.y, false)
+    seen_grid[start_cell.x][start_cell.y] = true
+    let to_visit = []
+    for dir < size(OFFSET_FOR_DIR):
+        const offset = OFFSET_FOR_DIR[dir]
+        const c = start_cell + offset
+        if walk_cost_grid[c.x][c.y] ≠ ∞:
+            seen_grid[c.x][c.y] = true
+            push(to_visit, {pos:c, dir:dir})
+    while size(to_visit) > 0:
+        const visited = pop_front(to_visit)
+        const pos = visited.pos
+        if not is_threatened_grid[pos.x][pos.y]:
+            return OFFSET_FOR_DIR[visited.dir] // c is a safe cell; return the direction to move to get here.
+        for dir < size(OFFSET_FOR_DIR):
+            const offset = OFFSET_FOR_DIR[dir]
+            let c = pos + offset
+            if walk_cost_grid[c.x][c.y] ≠ ∞ and not seen_grid[c.x][c.y]:
+                seen_grid[c.x][c.y] = true
+                push(to_visit, {pos:c, dir:visited.dir})
+    // If we get here, no reachable safe cells were found
+    return xy(0,0)
+
+// target: active_bombers
+// RO: player.is_cpu, bomber.pos, is_threatened_grid
+// RW: bomber.gamepad
+def itor_active_bomber_ai(bomber):
+    if not bomber.player.is_cpu:
+        return // early out for human players
+    bomber.gamepad = make_dummy_gamepad(bomber.gamepad.index) // reset dummy gamepad state
+    if not at_cell_center(bomber):
+        // TODO: this causes AI bombers to get stuck if they're halfway into a cell with a bomb in it.
+        return // AI only makes decisions at cell centers
+    const icell = map_pos_to_cell(bomber.pos)
+    if is_threatened_grid[icell.x][icell.y]:
+        const to_safe = dir_to_nearest_safe_cell(icell)
+        bomber.gamepad.x = to_safe.x
+        bomber.gamepad.xx = to_safe.x
+        bomber.gamepad.y = to_safe.y
+        bomber.gamepad.yy = to_safe.y
+        return // escaping is the highest priority; don't bother looking for any further actions to take
+    const can_place_bomb = bomber.active_bomb_count < bomber.max_active_bomb_count
+    // look in each direction and see what we see
+    const look_distance = max(map.size.x, map.size.y) // edge walls will stop us from searching out of bounds
+    let possible_move = ∅
+    for offset in OFFSET_FOR_DIR:
+        for 1 ≤ d ≤ look_distance:
+            const c = icell + d*offset
+            if not get_map_sprite(map, c, 0).can_walk:
+                break // stop searching at walls, but look in other directions
+            else if box_grid[c.x][c.y] or active_bomber_grid[c.x][c.y]:
+                if d ≤ bomber.bomb_range and can_place_bomb:
+                    bomber.gamepad.aa = 1 // TODO: this can potentially be suicide if we're not careful.
+                    return // action is decided on
+                else:
+                    // move towards target
+                    possible_move = offset
+                    break
+            else if powerup_grid[c.x][c.y]:
+                // move towards powerup
+                possible_move = offset
+                break // don't look past the power-up
+        // TODO: just move...somewhere. Ideally, pick a player and pathfind to them, and take a
+        // step in the right direction.
+        // ...but never move into a threatened cell (unless we're already in a threatened cell and escaping,
+        // as handled above)
+        if possible_move ≠ ∅:
+            let c = icell + possible_move
+            if not is_threatened_grid[c.x][c.y]:
+                bomber.gamepad.x = possible_move.x
+                bomber.gamepad.xx = possible_move.x
+                bomber.gamepad.y = possible_move.y
+                bomber.gamepad.yy = possible_move.y
+                return
+    
 // GLOBALS
 // The *_grid arrays are 2D arrays. Unless otherwise mentioned, grid[x][y]
 // stores a reference to the entity of that type in map cell x,y, or ∅ if
@@ -509,6 +650,8 @@ let breaking_boxes = []
 let box_grid = []
 let powerups = []
 let powerup_grid = []
+let is_threatened_grid = [] // true/false if cell is currently in the path of a bomb or explosion.
+let walk_cost_grid = [] // used for pathfinding. [x][y] is 1 if xy is a walkable cell, ∞ if untraverseable.
 
 enter(player_infos)
 ────────────────────────────────────────────────────────────────────────
@@ -529,11 +672,22 @@ breaking_boxes = []
 box_grid = []
 powerups = []
 powerup_grid = []
+is_threatened_grid = [] // true/false if cell is currently in the path of a bomb or explosion.
+walk_cost_grid = [] // used for pathfinding. [x][y] is 1 if xy is a walkable cell, ∞ if untraverseable.
 
 // In debug mode, we bypass the main menu and jump straight to play mode.
 // Set reasonable defaults.
 if get_previous_mode() == ∅:
     debug_print("Debug mode!")
+    
+if DEBUG_AI:
+    for i < size(player_infos):
+        if player_infos[i] == ∅:
+            player_infos[i] = {
+                gamepad: make_dummy_gamepad(i), // includes player index in gamepad.index
+                sprite_sheet: warrior_sprite,
+                is_cpu:true,
+            }
 
 // Search map for starting cells, so we can look them up by player index
 let player_start_icells = []
@@ -577,6 +731,7 @@ for info in player_infos:
         sprite_sheet: info.sprite_sheet,
         gamepad: info.gamepad,
         bomber: nil,
+        is_cpu: info.is_cpu or false
         })
 for player in players:
     // spawn bombers
@@ -612,11 +767,18 @@ iterate(powerups, itor_powerup_destroy)
 // Populate the bomb grid. Will not include bombs placed later this frame
 bomb_grid = make_array2d(map.size.x, map.size.y, ∅)
 iterate(bombs, itor_bomb_populate_grid)
+// Populate pathfinding grids used by AIs
+is_threatened_grid = make_array2d(map.size.x, map.size.y, false)
+populate_is_threatened_grid()
+walk_cost_grid = make_array2d(map.size.x, map.size.y, ∞)
+populate_walk_cost_grid()
 // Kill bombers touching explosions
 iterate(active_bombers, itor_active_bomber_kill)
 // Place remaining active bombers in grid
 active_bomber_grid = make_array2d(map.size.x, map.size.y, ∅)
 iterate(active_bombers, itor_active_bomber_populate_grid)
+// Fake gamepad input for AI bombers
+iterate(active_bombers, itor_active_bomber_ai)
 // Process active bombers
 iterate(active_bombers, itor_active_bomber_place_bomb)
 iterate(active_bombers, itor_active_bomber_update_velocity)
@@ -646,6 +808,18 @@ preserving_transform:
     iterate(boxes, draw_entity)
     iterate(breaking_boxes, draw_entity)
     iterate(powerups, draw_entity)
-
+    // Debug draw
+    if DEBUG_AI:
+        for x < map.size.x:
+            for y < map.size.y:
+                const walk_col = if walk_cost_grid[x][y] == 1 then #0F0 else #F00
+                draw_rect({pos:map_cell_to_pos(xy(x,y)), size:BLOCK_SIZE, outline:walk_col, color:rgba(0,0,0,0), z:5})
+                if is_threatened_grid[x][y]:
+                    draw_rect({pos:map_cell_to_pos(xy(x,y)), size:BLOCK_SIZE-xy(2,2), outline:#00F, color:rgba(0,0,0,0), z:5})
+        const p0_cell = map_pos_to_cell(players[0].bomber.pos)
+        const offset_to_safe = dir_to_nearest_safe_cell(p0_cell)
+        debug_watch(p0_cell)
+        debug_watch(offset_to_safe)
+        draw_rect({pos:map_cell_to_pos(p0_cell + offset_to_safe), size:BLOCK_SIZE, color:rgba(1,0,0,0.25), z:5})
 leave
 ────────────────────────────────────────────────────────────────────────
