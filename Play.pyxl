@@ -326,7 +326,7 @@ def itor_explosion_populate_grid(expl):
 // Grow explosions, adding new explosion entities to the end of the array.
 // RO: map, mode_frames, expl.pos, expl.born_frames, expl.grow_time,
 //     expl.is_center, expl.grow_dir, expl.duration, box_grid, powerup_grid
-// RW: expl.sprite, expl.range
+// RW: expl.sprite, expl.grown
 def grow_explosions(explosions):
     // helper for grow_explosions()
     def add_child_explosion(parent, dir):
@@ -355,7 +355,7 @@ def grow_explosions(explosions):
     for i < explosion_count:
         let expl = explosions[i]
         const age = mode_frames - expl.born_frames
-        if age > expl.grow_time and expl.range > 0:
+        if not expl.grown and age > expl.grow_time and expl.range > 0:
             if expl.is_center:
                 expl.sprite = map_tiles_sprite[1][2] // swap center sprite to 4-way intersection
                 // repeat for each direction
@@ -368,7 +368,7 @@ def grow_explosions(explosions):
                 const offset = OFFSET_FOR_DIR[expl.grow_dir]
                 if is_cell_empty(expl.pos, offset):
                     add_child_explosion(expl, expl.grow_dir)
-            expl.range = 0 // prevent future growth. TODO: add to new non-growing explosion list?
+            expl.grown = 0 // prevent future growth. TODO: add to new non-growing explosion list?
             
 // Cause explosions to fade out over time, and eventually be deleted.
 // target: explosions
