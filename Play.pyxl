@@ -95,6 +95,14 @@ def make_bomber_entity(player):
 
 // ACTIVE BOMBERS
 
+// Record which cells have active bombers in them
+// target: active_bombers
+// RO: map, bomber.pos
+// RW: bomber_grid
+def itor_active_bomber_populate_grid(bomber):
+    const icell = map_pos_to_cell(bomber.pos)
+    active_bomber_grid[icell.x][icell.y] = bomber
+
 // Determine bomber velocity and facing direction for this frame.
 // target: active_bombers
 // RO: map, bomber.pos, bomber.gamepad, bomber.speed, bomber.sprite_sheet
@@ -483,13 +491,14 @@ def itor_powerup_destroy(pup):
 
 
 // GLOBALS
-// The *_grid arrays are 2D arrays. grid[x][y] stores a reference to the
-// entity of that type in map cell x,y, or ∅ if the cell does not contain
-// an entity of that type.
+// The *_grid arrays are 2D arrays. Unless otherwise mentioned, grid[x][y]
+// stores a reference to the entity of that type in map cell x,y, or ∅ if
+// the cell does not contain an entity of that type.
 let map = nil
 let map_xform = xy(0,0)
 let players = []
 let active_bombers = []
+let active_bomber_grid = []
 let dead_bombers = []
 let bombs = []
 let bomb_grid = []
@@ -509,6 +518,7 @@ map = deep_clone(template_map)
 map_xform = map_offset(map)
 players = []
 active_bombers = []
+active_bomber_grid = []
 dead_bombers = []
 bombs = []
 bomb_grid = []
@@ -599,13 +609,16 @@ iterate(powerups, itor_powerup_populate_grid)
 iterate(powerups, itor_powerup_pickup)
 iterate(powerups, itor_powerup_break)
 iterate(powerups, itor_powerup_destroy)
-// Populate the bomb grid, including placing new bombs
+// Populate the bomb grid. Will not include bombs placed later this frame
 bomb_grid = make_array2d(map.size.x, map.size.y, ∅)
 iterate(bombs, itor_bomb_populate_grid)
-iterate(active_bombers, itor_active_bomber_place_bomb)
 // Kill bombers touching explosions
 iterate(active_bombers, itor_active_bomber_kill)
+// Place remaining active bombers in grid
+active_bomber_grid = make_array2d(map.size.x, map.size.y, ∅)
+iterate(active_bombers, itor_active_bomber_populate_grid)
 // Process active bombers
+iterate(active_bombers, itor_active_bomber_place_bomb)
 iterate(active_bombers, itor_active_bomber_update_velocity)
 iterate(active_bombers, itor_active_bomber_move)
 // misc animation processing
