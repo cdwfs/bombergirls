@@ -15,6 +15,7 @@ const DIR_W = 1
 const DIR_E = 2
 const DIR_N = 3
 const OFFSET_FOR_DIR = [xy(0,1), xy(-1,0), xy(1,0), xy(0,-1)]
+const ANGLE_FOR_DIR = [-π/2, π, 0, π/2]
 
 def enter_postgame_mode(data):
     reset_post_effects()
@@ -322,35 +323,34 @@ def itor_explosion_populate_grid(expl):
     const icell = map_pos_to_cell(expl.pos)
     explosion_grid[icell.x][icell.y] = expl
 
-// helper for grow_explosions()
-const ANGLE_FOR_DIR = [-π/2, π, 0, π/2]
-def add_child_explosion(parent, dir):
-    const age = mode_frames - parent.born_frames
-    const child_pos = parent.pos + OFFSET_FOR_DIR[dir]*BLOCK_SIZE
-    // If there is a box in this cell, this explosion shouldn't grow any further.
-    // The box-processing code will detect that there's an explosion in the same
-    // cell as the box and trigger the box-destruction process.
-    let child_range = parent.range - 1
-    const icell = map_pos_to_cell(child_pos)
-    if box_grid[icell.x][icell.y] or powerup_grid[icell.x][icell.y]:
-        child_range = 0
-    push(explosions, make_entity({
-        pos: child_pos,
-        z: parent.z,
-        sprite: map_tiles_sprite[2][2],
-        angle: ANGLE_FOR_DIR[dir],
-        born_frames: mode_frames,
-        range: child_range,
-        duration: parent.duration-age,
-        grow_time: parent.grow_time,
-        grow_dir: dir,
-        }))
-
 // Grow explosions, adding new explosion entities to the end of the array.
 // RO: map, mode_frames, expl.pos, expl.born_frames, expl.grow_time,
 //     expl.is_center, expl.grow_dir, expl.duration, box_grid, powerup_grid
 // RW: expl.sprite, expl.range
 def grow_explosions(explosions):
+    // helper for grow_explosions()
+    def add_child_explosion(parent, dir):
+        const age = mode_frames - parent.born_frames
+        const child_pos = parent.pos + OFFSET_FOR_DIR[dir]*BLOCK_SIZE
+        // If there is a box in this cell, this explosion shouldn't grow any further.
+        // The box-processing code will detect that there's an explosion in the same
+        // cell as the box and trigger the box-destruction process.
+        let child_range = parent.range - 1
+        const icell = map_pos_to_cell(child_pos)
+        if box_grid[icell.x][icell.y] or powerup_grid[icell.x][icell.y]:
+            child_range = 0
+        push(explosions, make_entity({
+            pos: child_pos,
+            z: parent.z,
+            sprite: map_tiles_sprite[2][2],
+            angle: ANGLE_FOR_DIR[dir],
+            born_frames: mode_frames,
+            range: child_range,
+            duration: parent.duration-age,
+            grow_time: parent.grow_time,
+            grow_dir: dir,
+            }))
+            
     const explosion_count = size(explosions)
     for i < explosion_count:
         let expl = explosions[i]
