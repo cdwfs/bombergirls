@@ -23,8 +23,9 @@ if not disable_input:
 
 const text_args = {font:font, x_align:"left", y_align:"top", wrap_width:SCREEN_SIZE.x, markup:true, color:#c}
 let line_y = 0
-line_y += draw_text({text:"Someday, there will be basic help info here!", pos:xy(0, line_y),
-    text_size:max(0,mode_frames/3), ...text_args}).y
+draw_text({text:"Someday, there will be basic help info here!", pos:xy(0, line_y),
+    text_size:max(0,mode_frames/3), ...text_args})
+line_y += font.line_height    
 draw_text({font:font, pos:xy(50% SCREEN_SIZE.x, 90% SCREEN_SIZE.y),
     text:replace("(b) Return To Menu", gamepad_array[0].prompt), color:#f, x_align:"center"})
 

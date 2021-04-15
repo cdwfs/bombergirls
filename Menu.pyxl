@@ -66,10 +66,10 @@ draw_text({font:font, x_align:"center", pos:title_pos + array_value(title_offset
 
 let menu_offset = xy(45% SCREEN_SIZE.x, 50% SCREEN_SIZE.y)
 for menu_item at i in MENU_ITEMS:
-    let dy = draw_text({text:menu_item, pos:menu_offset, ...MENU_ITEM_TEXT_ARGS}).y
+    draw_text({text:menu_item, pos:menu_offset, ...MENU_ITEM_TEXT_ARGS})
     if current_menu_item == i:
         draw_text({pos:menu_offset - xy(10,0), ...MENU_CURSOR_TEXT_ARGS})
-    menu_offset.y += dy
+    menu_offset.y += font.line_height
 
 leave
 ────────────────────────────────────────────────────────────────────────
