@@ -180,7 +180,7 @@ def itor_active_bomber_move(bomber):
         let sv = sign(vel)
         // bombs stop movement halfway into the bomb's cell
         const icell = map_pos_to_cell(pos)
-        const fcell = xy((pos.x/BLOCK_SIZE.x) % 1.0, (pos.y/BLOCK_SIZE.y) % 1.0)
+        const fcell = xy((pos.x/BLOCK_SIZE.x) mod 1.0, (pos.y/BLOCK_SIZE.y) mod 1.0)
         let blocked_by_bomb = false
         if fcell.x ≥ 0.5 and sv.x > 0 and bomb_grid[icell.x][icell.y]: blocked_by_bomb = true
         if 0 < fcell.x and fcell.x < 0.5 and sv.x < 0 and bomb_grid[icell.x][icell.y]: blocked_by_bomb = true
@@ -306,7 +306,7 @@ def itor_bomb_animate(bomb):
     bomb.scale = xy(s,s)
     // flash with increasing frequency as explosion nears
     if ttl ≤ 30:
-        bomb.sprite = if (round(ttl/3)%2 == 0) then BOMB_FLASH_SPRITE else BOMB_SPRITE
+        bomb.sprite = if (round(ttl/3) mod 2 == 0) then BOMB_FLASH_SPRITE else BOMB_SPRITE
     
 // Detonate any bombs whose time has come. This will remove them from the bombs array
 // and spawn explosion entities.
