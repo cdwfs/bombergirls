@@ -18,8 +18,6 @@ const OFFSET_FOR_DIR = [xy(0,1), xy(-1,0), xy(1,0), xy(0,-1)]
 const ANGLE_FOR_DIR = [-π/2, π, 0, π/2]
 
 def enter_postgame_mode(data):
-    reset_post_effects()
-    remove_frame_hooks_by_mode(Play)
     set_mode(PostGame) because "Game ended"
 
 def map_offset(m):
@@ -823,3 +821,5 @@ preserving_transform:
         draw_rect({pos:map_cell_to_pos(p0_cell + offset_to_safe), size:BLOCK_SIZE, color:rgba(1,0,0,0.25), z:5})
 leave
 ────────────────────────────────────────────────────────────────────────
+reset_post_effects()
+remove_frame_hooks_by_mode(get_mode())

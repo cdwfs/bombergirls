@@ -1,8 +1,6 @@
 Help
 ════════════════════════════════════════════════════════════════════════
 def enter_menu_mode(data):
-    reset_post_effects()
-    remove_frame_hooks_by_mode(Help)
     set_mode(Menu) because "Returned to main menu"
 
 let disable_input = false
@@ -31,4 +29,5 @@ draw_text({font:font, pos:xy(50% SCREEN_SIZE.x, 90% SCREEN_SIZE.y),
 
 leave
 ────────────────────────────────────────────────────────────────────────
-
+reset_post_effects()
+remove_frame_hooks_by_mode(get_mode())

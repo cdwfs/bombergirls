@@ -9,16 +9,10 @@ const MENU_ITEM_TEXT_ARGS = {font:font, color:#f, x_align:"left"}
 const MENU_CURSOR_TEXT_ARGS = {font:font, text:replace("(a)", gamepad_array[0].prompt), x_align:"right", color:#f}
 
 def enter_pregame_mode(data):
-    reset_post_effects()
-    remove_frame_hooks_by_mode(Menu)
     set_mode(PreGame) because "Choose PreGame from menu"
 def enter_help_mode(data):
-    reset_post_effects()
-    remove_frame_hooks_by_mode(Menu)
     set_mode(Help) because "Choose Help from menu"
 def enter_credits_mode(data):
-    reset_post_effects()
-    remove_frame_hooks_by_mode(Menu)
     set_mode(Credits) because "Choose Credits from menu"
 
 let current_menu_item = MENU_NEW_GAME
@@ -73,3 +67,5 @@ for menu_item at i in MENU_ITEMS:
 
 leave
 ────────────────────────────────────────────────────────────────────────
+reset_post_effects()
+remove_frame_hooks_by_mode(get_mode())

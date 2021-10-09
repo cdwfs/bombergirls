@@ -12,12 +12,8 @@ const ALL_BOMBER_SPRITES = [
     penguin_sprite,
 ]
 def enter_menu_mode(data):
-    reset_post_effects()
-    remove_frame_hooks_by_mode(PreGame)
     set_mode(Menu) because "Returned to main menu"
 def enter_play_mode(data):
-    reset_post_effects()
-    remove_frame_hooks_by_mode(PreGame)
     const player_infos = [∅,∅,∅,∅]
     for i < size(players):
         if players[i].state == PLAYER_STATE_READY:
@@ -171,3 +167,5 @@ for player in players:
             draw_sprite({pos:50% SCREEN_SIZE - xy(64+16*i,0), sprite:BOMB_SPRITE})
 leave
 ────────────────────────────────────────────────────────────────────────
+reset_post_effects()
+remove_frame_hooks_by_mode(get_mode())
