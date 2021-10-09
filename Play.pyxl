@@ -103,6 +103,7 @@ def make_dummy_gamepad(player_index):
         aa:0,
         bb:0,
         index:player_index,
+        player_color: gamepad_array[player_index].player_color
         }
 
 // ACTIVE BOMBERS
@@ -742,9 +743,13 @@ for player in players:
 frame
 ────────────────────────────────────────────────────────────────────────
 
+// Draw lives remaining for each player
 const LIVES_STR = ["   ", "*  ", "** ", "***"]
-draw_text({font:font, pos:xy(2% SCREEN_SIZE.x, 10% SCREEN_SIZE.y), text:"P1 " + LIVES_STR[players[0].lives], x_align:"left", color:#f5a})
-draw_text({font:font, pos:xy(98% SCREEN_SIZE.x, 10% SCREEN_SIZE.y), text:"P2 " + LIVES_STR[players[1].lives], x_align:"right", color:#0af})
+const LIVES_POS = [xy(8, 20), xy(348, 20), xy(8, 204), xy(348, 204)]
+debug_watch(LIVES_POS)
+for player at index in players:
+    draw_text({font:font, pos:LIVES_POS[index], text:"P"+(index+1)+" " + LIVES_STR[player.lives],
+        x_align:"left", color:player.gamepad.player_color})
 
 // SIMULATE
 // Explode bombs, potentially creating explosions
@@ -808,18 +813,23 @@ preserving_transform:
     iterate(breaking_boxes, draw_entity)
     iterate(powerups, draw_entity)
     // Debug draw
-    if DEBUG_AI:
-        for x < map.size.x:
-            for y < map.size.y:
-                const walk_col = if walk_cost_grid[x][y] == 1 then #0F0 else #F00
-                draw_rect({pos:map_cell_to_pos(xy(x,y)), size:BLOCK_SIZE, outline:walk_col, color:rgba(0,0,0,0), z:5})
-                if is_threatened_grid[x][y]:
-                    draw_rect({pos:map_cell_to_pos(xy(x,y)), size:BLOCK_SIZE-xy(2,2), outline:#00F, color:rgba(0,0,0,0), z:5})
-        const p0_cell = map_pos_to_cell(players[0].bomber.pos)
-        const offset_to_safe = dir_to_nearest_safe_cell(p0_cell)
-        debug_watch(p0_cell)
-        debug_watch(offset_to_safe)
-        draw_rect({pos:map_cell_to_pos(p0_cell + offset_to_safe), size:BLOCK_SIZE, color:rgba(1,0,0,0.25), z:5})
+    if DEBUG_DEV_MODE:
+        if DEBUG_AI:
+            // outline each cell in green if walkable, red if not, and blue if threatened.
+            for x < map.size.x:
+                for y < map.size.y:
+                    const walk_col = if walk_cost_grid[x][y] == 1 then #0F0 else #F00
+                    draw_rect({pos:map_cell_to_pos(xy(x,y)), size:BLOCK_SIZE, outline:walk_col, color:rgba(0,0,0,0), z:5})
+                    if is_threatened_grid[x][y]:
+                        draw_rect({pos:map_cell_to_pos(xy(x,y)), size:BLOCK_SIZE-xy(2,2), outline:#00F, color:rgba(0,0,0,0), z:5})
+            // shade each player's closest safe cell by their player color
+            for player in players:
+                const cell = map_pos_to_cell(player.bomber.pos)
+                const offset_to_safe = dir_to_nearest_safe_cell(cell)
+                //debug_watch(cell)
+                //debug_watch(offset_to_safe)
+                draw_rect({pos:map_cell_to_pos(cell + offset_to_safe), size:BLOCK_SIZE,
+                    color:rgba(player.gamepad.player_color, 0.25), z:5})
 leave
 ────────────────────────────────────────────────────────────────────────
 reset_post_effects()
