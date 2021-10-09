@@ -548,8 +548,8 @@ def populate_walk_cost_grid():
                 walk_cost_grid[x][y] = ∞ // bombs and boxes block movement
             else:
                 walk_cost_grid[x][y] = 1 // all clear
-// Find the closest reachable safe cell from the current position. Return the direction to
-// walk towards that cell.
+// Find the closest reachable safe cell from the current position. Return the unit-length vector to
+// walk towards that cell. If start_cell is already safe, returns xy(0,0)
 // RO: map, walk_cost_grid, is_threatened_grid
 def dir_to_nearest_safe_cell(start_cell):
     if not is_threatened_grid[start_cell.x][start_cell.y]:
@@ -616,8 +616,8 @@ def itor_active_bomber_ai(bomber):
                 // move towards powerup
                 possible_move = offset
                 break // don't look past the power-up
-        // TODO: just move...somewhere. Ideally, pick a player and pathfind to them, and take a
-        // step in the right direction.
+        // TODO: if possible_move is still null here, then just move...somewhere.
+        // Ideally, pick a player and pathfind to them, and take a step in the right direction.
         // ...but never move into a threatened cell (unless we're already in a threatened cell and escaping,
         // as handled above)
         if possible_move ≠ ∅:
@@ -648,7 +648,7 @@ let breaking_boxes = []
 let box_grid = []
 let powerups = []
 let powerup_grid = []
-let is_threatened_grid = [] // true/false if cell is currently in the path of a bomb or explosion.
+let is_threatened_grid = [] // true/false if [x][y] is currently in the path of a bomb or explosion.
 let walk_cost_grid = [] // used for pathfinding. [x][y] is 1 if xy is a walkable cell, ∞ if untraverseable.
 
 enter(player_infos)
@@ -678,6 +678,7 @@ walk_cost_grid = [] // used for pathfinding. [x][y] is 1 if xy is a walkable cel
 if get_previous_mode() == ∅:
     debug_print("Debug mode!")
     
+// Fill all empty player slots with AIs
 if DEBUG_AI:
     for i < size(player_infos):
         if player_infos[i] == ∅:
@@ -687,7 +688,7 @@ if DEBUG_AI:
                 is_cpu:true,
             }
 
-// Search map for starting cells, so we can look them up by player index
+// Search map for starting cells, so we can look them up by player index later.
 let player_start_icells = []
 resize(player_start_icells, size(PLAYER_SPAWN_SPRITES))
 for mx < map.size.x:
@@ -700,7 +701,7 @@ for mx < map.size.x:
                 // overwrite the map cell with a normal floor sprite.
                 set_map_sprite(map, icell, FLOOR_SPRITE)
 
-// Search map for box cells, replace them with floors, and spawn box entities
+// Search map for box cells, replace them with floors, and spawn box entities.
 box_grid = make_array2d(map.size.x, map.size.y, ∅)
 for mx < map.size.x:
     for my < map.size.y:
