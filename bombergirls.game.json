@@ -42,7 +42,7 @@
         "penguin_sprite": "penguin.sprite.json"
     },
     "version": 0,
-    "min_players": 2,
+    "min_players": 1,
     "max_players": 4,
     "cooperative": false,
     "competitive": true,
