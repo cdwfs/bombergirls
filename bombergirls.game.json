@@ -54,6 +54,11 @@
             "type": "boolean",
             "value": false,
             "description": "If true, draw some extra debug data pertaining to AI processing"
+        },
+        "DEBUG_DEV_MODE": {
+            "type": "boolean",
+            "value": false,
+            "description": "Enable debug features"
         }
     },
     "screenshot_tag": "Starter Example"
