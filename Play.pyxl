@@ -48,26 +48,6 @@ def is_cell_empty(pos, vel default xy(0,0)):
     // TODO: Check for entity in cell
     return true
     
-def is_zero(v2):
-    return v2.x == 0 and v2.y == 0
-def vec_str(v2):
-    return "["+v2.x+","+v2.y+"]"
-
-// Version of lerp() where t can be a vector
-def vec_lerp(a, b, t):
-    return (b - a) * t + a
-
-// Construct an empty array iterable by array[x][y]
-def make_array2d(w,h,val default nil):
-    let arr = []
-    resize(arr, w)
-    for x < w:
-        let column = []
-        for y < h:
-            push(column, val)
-        arr[x] = column
-    return arr
-    
 def is_dpad_pressed(gamepad):
     // checking just gamepad.x or gamepad.y isn't sufficient; when the opposite direction
     // is pressed, there is one frame where e.g. gamepad.xx is non-zero but gamepad.x is zero
