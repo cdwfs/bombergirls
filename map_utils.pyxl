@@ -1,0 +1,32 @@
+// Scripts, variables, and constants here are visible to all modes
+
+def create_map_from_def(map_def):
+    const unpadded_tiles = replace(trim_spaces(map_def.tiles), {" ":"", "\t":""})
+    const map_rows = split(unpadded_tiles, "\n")
+    const map_size = xy(size(map_rows[0]), size(map_rows))
+    
+    let map = deep_clone(template_map)
+    assert(equivalent(map.size, map_size),
+        "Map \"" + map_def.name + "\" dimensions " + vec_str(map_size) + " must be " + vec_str(map.size))
+    let spawn_cells = []
+    for mx < map_size.x:
+        for my < map_size.y:
+            const mc = xy(mx,my)
+            const c = map_rows[my][mx]
+            let s = ∅
+            if      c == ".": s = "floor"
+            else if c == "X": s = "wall_outer"
+            else if c == "x": s = "wall_inner"
+            else if c == "o": s = "block"
+            else if c == "P":
+                push(spawn_cells, mc)
+                s = "floor"
+            assert(s ≠ ∅, "Map \"" + map_def.name + "\" has invalid token \""+c+"\" at " + vec_str(mc))
+            set_map_sprite(map, mc, map_tiles_sprite[s])    
+    map.info = {spawn_cells: spawn_cells,
+        name: map_def.name,
+        description: map_def.description,
+        players_min: map_def.players_min,
+        players_max: map_def.players_max,
+    }
+    return map

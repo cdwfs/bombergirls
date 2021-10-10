@@ -1,0 +1,37 @@
+maps:
+    - name: My First Map
+      description: My very first map, be gentle!
+      players_min: 2 # implicitly 2 if not specified
+      players_max: 4 # implicitly 4 if not specified
+      tiles: |
+        XXXXXXXXXXXXXXX
+        XP.oo.....oo.PX
+        X.xox.xxxox.x.X
+        Xoooxoxoxoo.xoX
+        Xoxox.xoxxx.xoX
+        X.......ooxox.X
+        X.x.xxx.xox.x.X
+        X..oxo......x.X
+        Xox.x.x.xxxxxoX
+        Xox.....oo..xoX
+        X.xxxxxx..xxx.X
+        XP.oo.....oo.PX
+        XXXXXXXXXXXXXXX
+    - name: My Second Map
+      description: This one is fancier!
+      #players_min: 2 # implicitly 2 if not specified
+      #players_max: 4 # implicitly 4 if not specified
+      tiles: |
+        XXXXXXXXXXXXXXX
+        X.............X
+        X.............X
+        X.............X
+        X.............X
+        X.............X
+        X.............X
+        X.............X
+        X.............X
+        X.............X
+        X.............X
+        X.............X
+        XXXXXXXXXXXXXXX

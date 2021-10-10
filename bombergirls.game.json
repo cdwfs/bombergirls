@@ -5,7 +5,8 @@
     "license": "CC0/Public Domain (Replace with your own license)",
     "packages": [],
     "scripts": [
-        "globals.pyxl"
+        "globals.pyxl",
+        "map_utils.pyxl"
     ],
     "modes": [
         "Play",
@@ -59,6 +60,10 @@
             "type": "boolean",
             "value": false,
             "description": "Enable debug features"
+        },
+        "MAPS_YAML": {
+            "type": "raw",
+            "url": "AllMaps.yml"
         }
     },
     "screenshot_tag": "Starter Example"

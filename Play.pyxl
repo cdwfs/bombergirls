@@ -636,8 +636,8 @@ enter(player_infos)
 ────────────────────────────────────────────────────────────────────────
 
 // Initialize mode variables
-map = deep_clone(template_map)
-map_xform = map_offset(map)
+map = ∅
+map_xform = xy(0,0)
 players = []
 active_bombers = []
 active_bomber_grid = []
@@ -653,6 +653,9 @@ powerups = []
 powerup_grid = []
 is_threatened_grid = [] // true/false if cell is currently in the path of a bomb or explosion.
 walk_cost_grid = [] // used for pathfinding. [x][y] is 1 if xy is a walkable cell, ∞ if untraverseable.
+ 
+map = create_map_from_def(MAPS_YAML.maps[0])
+map_xform = map_offset(map)
 
 // In debug mode, we bypass the main menu and jump straight to play mode.
 // Set reasonable defaults.
@@ -668,19 +671,6 @@ if DEBUG_AI:
                 sprite_sheet: warrior_sprite,
                 is_cpu:true,
             }
-
-// Search map for starting cells, so we can look them up by player index later.
-let player_start_icells = []
-resize(player_start_icells, size(PLAYER_SPAWN_SPRITES))
-for mx < map.size.x:
-    for my < map.size.y:
-        const icell = xy(mx,my)
-        const ms = map[mx][my]
-        for p < size(PLAYER_SPAWN_SPRITES):
-            if ms == PLAYER_SPAWN_SPRITES[p]:
-                player_start_icells[p] = icell
-                // overwrite the map cell with a normal floor sprite.
-                set_map_sprite(map, icell, FLOOR_SPRITE)
 
 // Search map for box cells, replace them with floors, and spawn box entities.
 box_grid = make_array2d(map.size.x, map.size.y, ∅)
@@ -699,6 +689,8 @@ for mx < map.size.x:
             box_grid[icell.x][icell.y] = box
             set_map_sprite(map, icell, FLOOR_SPRITE)
 
+// Randomly assign players to spawn points
+const player_start_icells = shuffled(map.info.spawn_cells)
 // Create players and bombers
 for info in player_infos:
     if info == ∅:
