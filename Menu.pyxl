@@ -9,7 +9,7 @@ const MENU_ITEM_TEXT_ARGS = {font:font, color:#f, x_align:"left"}
 const MENU_CURSOR_TEXT_ARGS = {font:font, text:replace("(a)", gamepad_array[0].prompt), x_align:"right", color:#f}
 
 def enter_pregame_mode(data):
-    set_mode(PreGame) because "Choose PreGame from menu"
+    set_mode(PlayerSetup) because "Choose New Game from menu"
 def enter_help_mode(data):
     set_mode(Help) because "Choose Help from menu"
 def enter_credits_mode(data):

@@ -10,7 +10,7 @@
     "modes": [
         "Play",
         "Menu",
-        "PreGame",
+        "PlayerSetup",
         "PostGame",
         "Credits",
         "Help"

@@ -1,4 +1,4 @@
-PreGame
+PlayerSetup
 ════════════════════════════════════════════════════════════════════════
 
 const PLAYER_STATE_INACTIVE = "INACTIVE"
