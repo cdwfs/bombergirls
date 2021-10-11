@@ -8,7 +8,6 @@ const PLAYER_SPAWN_SPRITES = [
     map_tiles_sprite.start_p3,
     map_tiles_sprite.start_p4,
 ]
-const FLOOR_SPRITE = map_tiles_sprite.floor
 
 const DIR_S = 0
 const DIR_W = 1
@@ -39,7 +38,7 @@ def at_cell_center(entity):
 // gets the value of the map cell from a world-space coordinate.
 // Only the sign of vel is used, to check the correct direction; its magnitude is ignored.
 def map_sprite(pos, vel default xy(0, 0)):
-    return get_map_sprite(map, map_pos_to_cell(pos) + sign(vel), 0)
+    return get_map_sprite(map, map_pos_to_cell(pos) + sign(vel), MAP_LAYER_OBJECTS)
     
 def is_cell_empty(pos, vel default xy(0,0)):
     // Check map sprite
@@ -498,7 +497,7 @@ def populate_is_threatened_grid():
             for 1 ≤ d ≤ threat.range:
                 const c = icell + d*offset
                 // Implicitly assume that the map is surrounded by walls at the edges, so no need for a bounds check.
-                if not get_map_sprite(map, c, 0).can_walk:
+                if not get_map_sprite(map, c, MAP_LAYER_OBJECTS).can_walk:
                     break // walls block explosions.
                 else if box_grid[c.x][c.y]:
                     break // boxes block explosions
@@ -523,7 +522,7 @@ def populate_is_threatened_grid():
 def populate_walk_cost_grid():
     for x < map.size.x:
         for y < map.size.y:
-            if not get_map_sprite(map, xy(x,y), 0).can_walk:
+            if not get_map_sprite(map, xy(x,y), MAP_LAYER_OBJECTS).can_walk:
                 walk_cost_grid[x][y] = ∞ // unwalkable cells are...unwalkable
             else if box_grid[x][y] or bomb_grid[x][y]:
                 walk_cost_grid[x][y] = ∞ // bombs and boxes block movement
@@ -583,7 +582,7 @@ def itor_active_bomber_ai(bomber):
     for offset in OFFSET_FOR_DIR:
         for 1 ≤ d ≤ look_distance:
             const c = icell + d*offset
-            if not get_map_sprite(map, c, 0).can_walk:
+            if not get_map_sprite(map, c, MAP_LAYER_OBJECTS).can_walk:
                 break // stop searching at walls, but look in other directions
             else if box_grid[c.x][c.y] or active_bomber_grid[c.x][c.y]:
                 if d ≤ bomber.bomb_range and can_place_bomb:
@@ -677,7 +676,7 @@ box_grid = make_array2d(map.size.x, map.size.y, ∅)
 for mx < map.size.x:
     for my < map.size.y:
         const icell = xy(mx,my)
-        const ms = map[mx][my]
+        const ms = get_map_sprite(map, icell, MAP_LAYER_OBJECTS)
         if ms == map_tiles_sprite.block:
             const cell_pos = map_cell_to_pos(icell)
             const box = make_entity({
@@ -687,7 +686,7 @@ for mx < map.size.x:
                 })
             push(boxes, box)
             box_grid[icell.x][icell.y] = box
-            set_map_sprite(map, icell, FLOOR_SPRITE)
+            set_map_sprite(map, icell, MAP_SPRITE_EMPTY, MAP_LAYER_OBJECTS)
 
 // Randomly assign players to spawn points
 const player_start_icells = shuffled(map.info.spawn_cells)
