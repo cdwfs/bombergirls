@@ -64,6 +64,23 @@
         "MAPS_YAML": {
             "type": "raw",
             "url": "AllMaps.yml"
+        },
+        "DEBUG_POINT": {
+            "type": "xy",
+            "value": {
+                "x": {
+                    "type": "number",
+                    "value": "260"
+                },
+                "y": {
+                    "type": "number",
+                    "value": "20"
+                }
+            },
+            "nudge": {
+                "x": "+1",
+                "y": "-1"
+            }
         }
     },
     "screenshot_tag": "Starter Example"
