@@ -631,7 +631,7 @@ let powerup_grid = []
 let is_threatened_grid = [] // true/false if [x][y] is currently in the path of a bomb or explosion.
 let walk_cost_grid = [] // used for pathfinding. [x][y] is 1 if xy is a walkable cell, ∞ if untraverseable.
 
-enter(player_infos)
+enter
 ────────────────────────────────────────────────────────────────────────
 
 // Initialize mode variables
@@ -663,9 +663,9 @@ if get_previous_mode() == ∅:
     
 // Fill all empty player slots with AIs
 if DEBUG_AI:
-    for i < size(player_infos):
-        if player_infos[i] == ∅:
-            player_infos[i] = {
+    for i < size(g_player_infos):
+        if g_player_infos[i] == ∅:
+            g_player_infos[i] = {
                 gamepad: make_dummy_gamepad(i), // includes player index in gamepad.index
                 sprite_sheet: warrior_sprite,
                 is_cpu:true,
@@ -677,7 +677,8 @@ for mx < map.size.x:
     for my < map.size.y:
         const icell = xy(mx,my)
         const ms = get_map_sprite(map, icell, MAP_LAYER_OBJECTS)
-        if ms == map_tiles_sprite.block:
+        todo("Don't check for specific crate sprite; check for an is_crate field on ms")
+        if ms == map_tiles_sprite.crate:
             const cell_pos = map_cell_to_pos(icell)
             const box = make_entity({
                 sprite: map_tiles_sprite[0][3],
@@ -691,7 +692,7 @@ for mx < map.size.x:
 // Randomly assign players to spawn points
 const player_start_icells = shuffled(map.info.spawn_cells)
 // Create players and bombers
-for info in player_infos:
+for info in g_player_infos:
     if info == ∅:
         continue
     const player_index = info.gamepad.index

@@ -1,0 +1,111 @@
+MapSetup
+════════════════════════════════════════════════════════════════════════
+
+def enter_playersetup_mode():
+    set_mode(PlayerSetup) because "Returned to player setup"
+def enter_play_mode():
+    set_mode(Play) because "Started the game"
+
+let map_list = []
+let current_map_index = 0
+let current_map = ∅
+let disable_input = false
+
+enter
+────────────────────────────────────────────────────────────────────────
+map_list = []
+current_map_index = 0
+current_map = ∅
+disable_input = false
+
+todo("Load active maps from persistent storage, if present")
+for m at index in MAPS_YAML.maps:
+    push(map_list, {name: m.name, src_index:index, selected: true})
+//for i < 20:
+//    push(map_list, {name:"Dummy " + (i+1), -1, selected: true})
+
+current_map = create_map_from_def(MAPS_YAML.maps[current_map_index])
+
+frame
+────────────────────────────────────────────────────────────────────────
+
+if not disable_input:
+    if joy.yy ≠ 0:
+        play_sound(SND_CURSOR_ACCEPT)
+        current_map_index = clamp(current_map_index+joy.yy, 0, size(map_list)-1)
+        current_map = create_map_from_def(MAPS_YAML.maps[current_map_index])
+    if joy.xx ≠ 0:
+        play_sound(SND_CURSOR_ACCEPT)
+        map_list[current_map_index].selected = not map_list[current_map_index].selected
+    if joy.cc:
+        for m in map_list:
+            play_sound(SND_CURSOR_ACCEPT)
+            m.selected = true
+    if joy.dd:
+        for m in map_list:
+            play_sound(SND_CURSOR_ACCEPT)
+            m.selected = false
+    if joy.aa:
+        todo("Players will almost certainly hit A while trying to select maps. Should change this flow.")
+        disable_input = true
+        play_sound(SND_CURSOR_ACCEPT)
+        add_frame_hook(fade_out, enter_play_mode, 30, ∅, {})
+    else if joy.bb:
+        disable_input = true
+        play_sound(SND_CURSOR_BACK)
+        add_frame_hook(fade_out, enter_playersetup_mode, 30, ∅, {})
+        
+// Draw title bar
+preserving_transform:
+    draw_text({font:font, x_align:"center", y_align:"top", pos:xy(0.5,0)*SCREEN_SIZE,
+        color:#f, text:"MAP SELECT"})
+    draw_line({A:xy(0,12), B:xy(SCREEN_SIZE.x,12), color:#f})
+
+// Draw map list
+const LIST_RECT = {corner:xy(4, 16), size: xy(SCREEN_SIZE.x/2, 184)}
+debug_watch(map_list)
+preserving_transform:
+    const NOT_SELECTED = "◻"
+    const SELECTED = "◼"
+    compose_transform(LIST_RECT.corner)
+    draw_corner_rect({corner:xy(0,0), size:LIST_RECT.size, outline:#f, color:#0})
+    set_clip({corner:LIST_RECT.corner+xy(2,2), size:LIST_RECT.size-xy(4,4)})
+    for m at index in map_list:
+        const checkbox = if m.selected then "◼" else "◻"
+        const color = if index == current_map_index then #ff0 else #c
+        draw_text({font:font, pos:xy(4, LIST_RECT.size.y/2 + font.line_height*(index-current_map_index)),
+            color, text:checkbox + " " + m.name})
+    reset_clip()
+    
+// Draw info about selected map
+// SCREEN_SIZE is 384x224 pixels
+// maps are 15x13 tiles of 16x16 each, so 240x208 pixels
+// - half-res would be 120x104, leaving 264 for the list
+// - quarter-res would be 60x52, leaving 324 for the list
+preserving_transform:
+    const MAP_PREVIEW_SIZE = current_map.size_pixels / 2
+    const MAP_PREVIEW_POS = xy(LIST_RECT.corner.x + LIST_RECT.size.x + 4, LIST_RECT.corner.y) + xy(0.5,0.5)
+    compose_transform(MAP_PREVIEW_POS)
+    draw_map({map:current_map, pos:xy(32,0), scale:xy(0.5,0.5)})
+    draw_text({font:font, x_align:"center", y_align:"top", pos:xy(32,0)+MAP_PREVIEW_SIZE*xy(0.5,1), color:#f,
+        text:current_map.info.name})
+    draw_text({font:font, x_align:"left", y_align:"top", pos:MAP_PREVIEW_SIZE*xy(0,1)+xy(0,font.line_height), color:#f,
+        wrap_width:SCREEN_SIZE.x - 4 - MAP_PREVIEW_POS.x, text:current_map.info.description})
+
+// Draw instructions
+preserving_transform:
+    compose_transform(xy(0, SCREEN_SIZE.y))
+    draw_text({font:font, x_align:"left", y_align:"bottom", pos:xy(2,-2), color:#f,
+        text:replace("[<][>]Toggle   [^][v]Scroll   (c)All   (d)None  (a)Play   (b)Back", joy.prompt)})
+
+leave
+────────────────────────────────────────────────────────────────────────
+// Preserve current map pool
+g_map_pool = []
+for entry in map_list:
+    if not entry.selected:
+        continue
+    push(g_map_pool, entry.src_index)
+
+reset_post_effects()
+remove_frame_hooks_by_mode(get_mode())

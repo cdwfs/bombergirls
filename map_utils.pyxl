@@ -25,7 +25,7 @@ def create_map_from_def(map_def):
             if      c == ".": s = "empty"
             else if c == "X": s = "wall_outer"
             else if c == "x": s = "wall_inner"
-            else if c == "o": s = "block"
+            else if c == "o": s = "crate"
             else if c == "P":
                 push(spawn_cells, mc)
                 s = "empty"

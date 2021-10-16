@@ -52,4 +52,14 @@ def make_array2d(w,h,val default nil):
             push(column, val)
         arr[x] = column
     return arr
-    
+
+//
+// Global game setup state, so we don't have to keep passing it from mode to mode
+//
+
+// Filled out in PlayerSetup. A null entry means "no player in this slot". If non-null, the
+// expected contents are { gamepad, spritesheet, is_cpu }
+let g_player_infos = [∅,∅,∅,∅]
+
+// Filled out in MapSetup. Expected contents are a list of indices into MAPS_YAML.maps
+let g_map_pool = []

@@ -11,17 +11,10 @@ const ALL_BOMBER_SPRITES = [
     warrior_sprite,
     penguin_sprite,
 ]
-def enter_menu_mode(data):
+def enter_menu_mode():
     set_mode(Menu) because "Returned to main menu"
-def enter_play_mode(data):
-    const player_infos = [∅,∅,∅,∅]
-    for i < size(players):
-        if players[i].state == PLAYER_STATE_READY:
-            player_infos[i] = {
-                gamepad: players[i].pad, // includes player index in gamepad.index
-                sprite_sheet: ALL_BOMBER_SPRITES[players[i].bomber_index],
-            }
-    set_mode(Play, player_infos) because "Started the game"
+def enter_mapsetup_mode():
+    set_mode(MapSetup) because "Advanced to map setup"
 
 let players = [∅,∅,∅,∅]
 let disable_input = false
@@ -100,7 +93,7 @@ if not disable_input:
         if players[0].pad.bb or players[1].pad.bb or players[2].pad.bb or players[3].pad.bb:
             disable_input = true
             play_sound(SND_CURSOR_BACK)
-            add_frame_hook(fade_out, enter_menu_mode, 30, ∅, {})
+            add_frame_hook(fade_out, enter_menu_mode, 30, ∅)
     // If at least two players are ready and all other players are inactive, start a
     // countdown to enter play mode. Any player entering the ready state resets the timer.
     const MIN_PLAYER_COUNT = if DEBUG_DEV_MODE and DEBUG_AI then 1 else 2
@@ -115,7 +108,7 @@ if not disable_input:
         if countdown_timer ≤ 0:
             disable_input = true
             play_sound(SND_BOMB_EXPLODE)
-            add_frame_hook(fade_out, enter_play_mode, 30, ∅, {})
+            add_frame_hook(fade_out, enter_mapsetup_mode, 30, ∅)
     debug_watch(countdown_timer)
         
 // Draw each player's state
@@ -168,5 +161,13 @@ for player in players:
             draw_sprite({pos:50% SCREEN_SIZE - xy(64+16*i,0), sprite:BOMB_SPRITE})
 leave
 ────────────────────────────────────────────────────────────────────────
+// Preserve current player settings
+g_player_infos = [∅,∅,∅,∅]
+for i < size(players):
+    if players[i].state == PLAYER_STATE_READY:
+        g_player_infos[i] = {
+            gamepad: players[i].pad, // includes player index in gamepad.index
+            sprite_sheet: ALL_BOMBER_SPRITES[players[i].bomber_index],
+        }
 reset_post_effects()
 remove_frame_hooks_by_mode(get_mode())
