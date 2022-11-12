@@ -1,35 +1,14 @@
 {
-    "url": "map-tiles.png",
+    "url": "gameplay.png",
     "sprite_size": {
         "x": 16,
         "y": 16
     },
     "license": "TODO",
     "names": {
-        "wall_inner": {
-            "x": 0,
-            "y": 0
-        },
-        "block": {
-            "x": 1,
-            "y": 0
-        },
-        "wall_outer": {
-            "x": 2,
-            "y": 0
-        },
-        "floor": {
-            "x": 7,
-            "y": 0,
-            "can_walk": true
-        },
-        "crate": {
-            "x": 0,
-            "y": 3,
-        },
         "empty": {
             "x": 4,
-            "y": 1,
+            "y": 2,
             "can_walk": true
         },
         "start_p1": {
@@ -51,6 +30,30 @@
             "x": 3,
             "y": 1,
             "can_walk": true
+        },
+        "explosion_start": {
+            "x": 0,
+            "y": 2
+        },
+        "explosion_center": {
+            "x": 1,
+            "y": 2
+        },
+        "explosion_cap": {
+            "x": 2,
+            "y": 2
+        },
+        "explosion_line": {
+            "x": 3,
+            "y": 2
+        },
+        "powerup_bomb_count": {
+            "x": 4,
+            "y": 1
+        },
+        "powerup_bomb_range": {
+            "x": 5,
+            "y": 1
         }
     }
 }

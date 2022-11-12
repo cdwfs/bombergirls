@@ -21,7 +21,6 @@
     "docs": [],
     "assets": {
         "engineer_sprite": "quad://sprites/dawnlike-engineer-16x16.sprite.json",
-        "map_tiles_sprite": "map-tiles.sprite.json",
         "template_map": "template.map.json",
         "blocks_sprite": "quad://sprites/kenney-blocks-16x16.sprite.json",
         "mage_sprite": "quad://sprites/dawnlike-mage-16x16.sprite.json",
@@ -41,7 +40,9 @@
         "font": "quad://fonts/weaver-7.font.json",
         "large_font": "quad://fonts/weaver-10.font.json",
         "blip_15_sound": "quad://sounds/blip-15.sound.json",
-        "penguin_sprite": "penguin.sprite.json"
+        "penguin_sprite": "penguin.sprite.json",
+        "gameplay_sprite": "gameplay.sprite.json",
+        "map_sprite": "map.sprite.json"
     },
     "version": 0,
     "min_players": 1,

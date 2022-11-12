@@ -3,10 +3,10 @@ Play
 
 const BLOCK_SIZE = xy(16,16)
 const PLAYER_SPAWN_SPRITES = [
-    map_tiles_sprite.start_p1,
-    map_tiles_sprite.start_p2,
-    map_tiles_sprite.start_p3,
-    map_tiles_sprite.start_p4,
+    gameplay_sprite.start_p1,
+    gameplay_sprite.start_p2,
+    gameplay_sprite.start_p3,
+    gameplay_sprite.start_p4,
 ]
 
 const DIR_S = 0
@@ -306,7 +306,7 @@ def itor_bomb_explode(bomb):
             is_center: true,
             duration: (bomb.range+4)*GROW_TIME, // how long before this explosion disappears
             grow_time: GROW_TIME, // how long before this explosion grows
-            sprite: map_tiles_sprite[0][2],
+            sprite: gameplay_sprite.explosion_start,
             z: 2,
             }))
         bomb_grid[icell.x][icell.y] = ∅
@@ -342,7 +342,7 @@ def grow_explosions(explosions):
         push(explosions, make_entity({
             pos: child_pos,
             z: parent.z,
-            sprite: map_tiles_sprite[2][2],
+            sprite: gameplay_sprite.explosion_cap,
             angle: ANGLE_FOR_DIR[dir],
             born_frames: mode_frames,
             range: child_range,
@@ -357,14 +357,14 @@ def grow_explosions(explosions):
         const age = mode_frames - expl.born_frames
         if not expl.grown and age > expl.grow_time and expl.range > 0:
             if expl.is_center:
-                expl.sprite = map_tiles_sprite[1][2] // swap center sprite to 4-way intersection
+                expl.sprite = gameplay_sprite.explosion_center // swap center sprite to 4-way intersection
                 // repeat for each direction
                 for dir < 4:
                     const offset = OFFSET_FOR_DIR[dir]
                     if is_cell_empty(expl.pos, offset):
                         add_child_explosion(expl, dir)
             else:
-                expl.sprite = map_tiles_sprite[3][2] // swap center sprite to 2-way intersection
+                expl.sprite = gameplay_sprite.explosion_line // swap center sprite to 2-way intersection
                 const offset = OFFSET_FOR_DIR[expl.grow_dir]
                 if is_cell_empty(expl.pos, offset):
                     add_child_explosion(expl, expl.grow_dir)
@@ -392,7 +392,7 @@ def itor_box_break(box):
     if explosion_grid[icell.x][icell.y]:
         play_sound(SND_BOX_BREAK)
         const bbox = make_entity({
-            sprite: map_tiles_sprite[1][3],
+            sprite: map.info.crate_destroyed_sprite,
             pos: box.pos,
             z: box.z+1
             })
@@ -412,7 +412,7 @@ def itor_breaking_box_destroy(bbox):
         const roll = ξ
         if roll < 0.2:
             push(powerups, make_entity({
-                sprite:map_tiles_sprite[2][3], // +bombs
+                sprite:gameplay_sprite.powerup_bomb_count, // +bombs
                 pos:bbox.pos,
                 inc_bombs: 1,
                 size: xy(14,14),
@@ -420,7 +420,7 @@ def itor_breaking_box_destroy(bbox):
                 }))
         else if roll < 0.4:
             push(powerups, make_entity({
-                sprite:map_tiles_sprite[3][3], // +range
+                sprite:gameplay_sprite.powerup_bomb_range, // +range
                 pos:bbox.pos,
                 inc_range: 1,
                 size: xy(14,14),
@@ -677,11 +677,10 @@ for mx < map.size.x:
     for my < map.size.y:
         const icell = xy(mx,my)
         const ms = get_map_sprite(map, icell, MAP_LAYER_OBJECTS)
-        todo("Don't check for specific crate sprite; check for an is_crate field on ms")
-        if ms == map_tiles_sprite.crate:
+        if ms.is_crate:
             const cell_pos = map_cell_to_pos(icell)
             const box = make_entity({
-                sprite: map_tiles_sprite[0][3],
+                sprite: map.info.crate_sprite,
                 pos: cell_pos,
                 z: 2,
                 })

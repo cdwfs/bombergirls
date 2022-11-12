@@ -2,6 +2,6 @@
     "url": "template.tmx",
     "license": "TODO",
     "sprite_url_table": {
-        "<default>": "map-tiles.sprite.json"
+        "<default>": "map.sprite.json"
     }
 }
