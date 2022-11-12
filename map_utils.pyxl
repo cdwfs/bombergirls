@@ -14,17 +14,21 @@ def create_map_from_def(map_def):
     assert(equivalent(map.size, map_size),
         "Map \"" + map_def.name + "\" dimensions " + vec_str(map_size) + " must be " + vec_str(map.size))
     let spawn_cells = []
+    const floor_sprite = map_sprite["floor-"+(map_def.floor default "dirt-white")]
+    const wall_sprite  = map_sprite["wall-"+(map_def.wall default "brick-red")]
+    const crate_sprite = map_sprite["crate-"+(map_def.crate default "chest-brown")]
+    const crate_sprite_destroyed = map_sprite["crate-"+(map_def.floor default "chest-brown")+"-destroyed"]
     for mx < map_size.x:
         for my < map_size.y:
             const mc = xy(mx,my)
             // Layer 0 is all floor (so that floors are drawn under objects in layer 1)
-            set_map_sprite(map, mc, map_sprite["floor-dirt-white"], MAP_LAYER_FLOOR)
+            set_map_sprite(map, mc, floor_sprite, MAP_LAYER_FLOOR)
             // Fill cells in layer 1 based on map contents
             const c = map_rows[my][mx]
             if      c == ".": set_map_sprite(map, mc, MAP_SPRITE_EMPTY, MAP_LAYER_OBJECTS)
-            else if c == "X": set_map_sprite(map, mc, map_sprite["wall-brick-red"], MAP_LAYER_OBJECTS)
-            else if c == "x": set_map_sprite(map, mc, map_sprite["wall-brick-red"], MAP_LAYER_OBJECTS)
-            else if c == "o": set_map_sprite(map, mc, map_sprite["crate-chest-brown"], MAP_LAYER_OBJECTS)
+            else if c == "X": set_map_sprite(map, mc, wall_sprite, MAP_LAYER_OBJECTS)
+            else if c == "x": set_map_sprite(map, mc, wall_sprite, MAP_LAYER_OBJECTS)
+            else if c == "o": set_map_sprite(map, mc, crate_sprite, MAP_LAYER_OBJECTS)
             else if c == "P":
                 push(spawn_cells, mc)
                 set_map_sprite(map, mc, MAP_SPRITE_EMPTY, MAP_LAYER_OBJECTS)
@@ -36,9 +40,9 @@ def create_map_from_def(map_def):
         description: map_def.description,
         players_min: map_def.players_min,
         players_max: map_def.players_max,
-        wall_sprite: map_sprite["wall-brick-red"],
-        floor_sprite: map_sprite["floor-dirt-white"],
-        crate_sprite: map_sprite["crate-chest-brown"],
-        crate_destroyed_sprite: map_sprite["crate-chest-brown-destroyed"],
+        wall_sprite: wall_sprite,
+        floor_sprite: floor_sprite,
+        crate_sprite: crate_sprite,
+        crate_destroyed_sprite: crate_sprite_destroyed,
     }
     return map

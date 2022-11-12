@@ -1,6 +1,9 @@
 maps:
     - name: My First Map
       description: My very first map, be gentle!
+      floor: dirt-grey
+      wall: plate-blue
+      crate: chest-brown
       players_min: 2 # implicitly 2 if not specified
       players_max: 4 # implicitly 4 if not specified
       tiles: |
