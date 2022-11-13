@@ -31,6 +31,14 @@
             "y": 1,
             "can_walk": true
         },
+        "bomb": {
+            "x": 1,
+            "y": 3
+        },
+        "bomb_flash": {
+            "x": 2,
+            "y": 3
+        },
         "explosion_start": {
             "x": 0,
             "y": 2

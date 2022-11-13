@@ -12,9 +12,8 @@ const SND_COUNTDOWN_TICK = {sound:blip_15_sound, volume: 100%}
 
 const PLAYER_COLORS = [#f5a, #0af, #fd3, #4e4]
 
-todo("copy bomb sprites into gameplay_sprite")
-const BOMB_SPRITE = blocks_sprite[5][15]
-const BOMB_FLASH_SPRITE = blocks_sprite[6][15]
+const BOMB_SPRITE = gameplay_sprite.bomb
+const BOMB_FLASH_SPRITE = gameplay_sprite.bomb_flash
 
 const ALL_BOMBER_SPRITES = [
     engineer_sprite,
