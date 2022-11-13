@@ -291,6 +291,7 @@ def itor_bomb_explode(bomb):
             is_center: true,
             duration: (bomb.range+4)*GROW_TIME, // how long before this explosion disappears
             grow_time: GROW_TIME, // how long before this explosion grows
+            grown: false,
             sprite: gameplay_sprite.explosion_start,
             z: 2,
             }))
@@ -333,6 +334,7 @@ def grow_explosions(explosions):
             range: child_range,
             duration: parent.duration-age,
             grow_time: parent.grow_time,
+            grown: false,
             grow_dir: dir,
             }))
             
@@ -353,7 +355,7 @@ def grow_explosions(explosions):
                 const offset = OFFSET_FOR_DIR[expl.grow_dir]
                 if is_cell_empty(expl.pos, offset):
                     add_child_explosion(expl, expl.grow_dir)
-            expl.grown = 0 // prevent future growth. TODO: add to new non-growing explosion list?
+            expl.grown = true // prevent future growth. TODO: add to new non-growing explosion list?
             
 // Cause explosions to fade out over time, and eventually be deleted.
 // target: explosions
