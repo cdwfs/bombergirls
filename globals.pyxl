@@ -61,5 +61,5 @@ def make_array2d(w,h,val default nil):
 // expected contents are { gamepad, spritesheet, is_cpu }
 let g_player_infos = [∅,∅,∅,∅]
 
-// Filled out in MapSetup. Expected contents are a list of indices into MAPS_YAML.maps
+// Filled out in MapPoolSetup. Expected contents are a list of indices into MAPS_YAML.maps
 let g_map_pool = []

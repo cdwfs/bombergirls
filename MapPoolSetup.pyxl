@@ -1,4 +1,4 @@
-MapSetup
+MapPoolSetup
 ════════════════════════════════════════════════════════════════════════
 
 def enter_playersetup_mode():
@@ -46,6 +46,7 @@ if not disable_input:
             play_sound(SND_CURSOR_ACCEPT)
             m.selected = false
     if joy.aa:
+        todo("Prevent advancing if no maps are selected")
         todo("Players will almost certainly hit A while trying to select maps. Should change this flow.")
         disable_input = true
         play_sound(SND_CURSOR_ACCEPT)
