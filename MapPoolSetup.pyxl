@@ -46,11 +46,19 @@ if not disable_input:
             play_sound(SND_CURSOR_ACCEPT)
             m.selected = false
     if joy.aa:
-        todo("Prevent advancing if no maps are selected")
-        todo("Players will almost certainly hit A while trying to select maps. Should change this flow.")
-        disable_input = true
-        play_sound(SND_CURSOR_ACCEPT)
-        add_frame_hook(fade_out, enter_play_mode, 30, ∅, {})
+        // Must have at least one map selected to advance
+        let no_maps_selected = true
+        for entry in map_list:
+            if entry.selected:
+                no_maps_selected = false
+                break
+        if no_maps_selected:
+            play_sound(SND_CURSOR_BACK)
+        else:
+            todo("Players will almost certainly hit A while trying to select maps. Should change this flow.")
+            disable_input = true
+            play_sound(SND_CURSOR_ACCEPT)
+            add_frame_hook(fade_out, enter_play_mode, 30, ∅, {})
     else if joy.bb:
         disable_input = true
         play_sound(SND_CURSOR_BACK)
