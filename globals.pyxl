@@ -62,21 +62,6 @@ def make_array2d(w,h,val default nil):
         arr[x] = column
     return arr
 
-// Construct a dummy gamepad object for use by AI players.
-def make_dummy_gamepad(player_index):
-    return {
-        x:0,
-        y:0,
-        xx:0,
-        yy:0,
-        a:0,
-        b:0,
-        aa:0,
-        bb:0,
-        index:player_index,
-        player_color: gamepad_array[player_index].player_color
-        }
-
 //
 // Global game setup state, so we don't have to keep passing it from mode to mode
 //

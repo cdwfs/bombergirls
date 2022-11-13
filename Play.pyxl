@@ -548,17 +548,17 @@ def dir_to_nearest_safe_cell(start_cell):
 def itor_active_bomber_ai(bomber):
     if not bomber.player.is_cpu:
         return // early out for human players
-    bomber.gamepad = make_dummy_gamepad(bomber.gamepad.index) // reset dummy gamepad state
+    let controls = {}
     if not at_cell_center(bomber):
         // TODO: this causes AI bombers to get stuck if they're halfway into a cell with a bomb in it.
+        update_bot_gamepad(bomber.gamepad, controls)
         return // AI only makes decisions at cell centers
     const icell = map_pos_to_cell(bomber.pos)
     if is_threatened_grid[icell.x][icell.y]:
         const to_safe = dir_to_nearest_safe_cell(icell)
-        bomber.gamepad.x = to_safe.x
-        bomber.gamepad.xx = to_safe.x
-        bomber.gamepad.y = to_safe.y
-        bomber.gamepad.yy = to_safe.y
+        controls.x = to_safe.x
+        controls.y = to_safe.y
+        update_bot_gamepad(bomber.gamepad, controls)
         return // escaping is the highest priority; don't bother looking for any further actions to take
     const can_place_bomb = bomber.active_bomb_count < bomber.max_active_bomb_count
     // look in each direction and see what we see
@@ -571,7 +571,8 @@ def itor_active_bomber_ai(bomber):
                 break // stop searching at walls, but look in other directions
             else if box_grid[c.x][c.y] or active_bomber_grid[c.x][c.y]:
                 if d ≤ bomber.bomb_range and can_place_bomb:
-                    bomber.gamepad.aa = 1 // TODO: this can potentially be suicide if we're not careful.
+                    controls.a = 1 // TODO: this can potentially be suicide if we're not careful.
+                    update_bot_gamepad(bomber.gamepad, controls)
                     return // action is decided on
                 else:
                     // move towards target
@@ -588,10 +589,9 @@ def itor_active_bomber_ai(bomber):
         if possible_move ≠ ∅:
             let c = icell + possible_move
             if not is_threatened_grid[c.x][c.y]:
-                bomber.gamepad.x = possible_move.x
-                bomber.gamepad.xx = possible_move.x
-                bomber.gamepad.y = possible_move.y
-                bomber.gamepad.yy = possible_move.y
+                controls.x = possible_move.x
+                controls.y = possible_move.y
+                update_bot_gamepad(bomber.gamepad, controls)
                 return
     
 // GLOBALS
@@ -650,7 +650,7 @@ if get_previous_mode() == ∅:
         for i < size(g_player_infos):
             if g_player_infos[i] == ∅:
                 g_player_infos[i] = {
-                    gamepad: make_dummy_gamepad(i), // includes player index in gamepad.index
+                    gamepad: make_bot_gamepad(gamepad_array[i].player_color, "Bot "+i, i),
                     sprite_sheet: warrior_sprite,
                     is_cpu:true,
                 }

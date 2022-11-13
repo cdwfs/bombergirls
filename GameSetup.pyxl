@@ -28,7 +28,7 @@ def enter_mappoolsetup_mode():
         for j < size(g_player_infos):
             if g_player_infos[j] == nil:
                 g_player_infos[j] = {
-                    gamepad: make_dummy_gamepad(j),
+                    gamepad: make_bot_gamepad(gamepad_array[j].player_color, "Bot "+j, j),
                     sprite_sheet: pop(available_bomber_sprites),
                     is_cpu: true,
                 }
