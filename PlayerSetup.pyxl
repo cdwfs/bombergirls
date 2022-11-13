@@ -4,13 +4,6 @@ PlayerSetup
 const PLAYER_STATE_INACTIVE = "INACTIVE"
 const PLAYER_STATE_ACTIVE = "ACTIVE"
 const PLAYER_STATE_READY = "READY"
-const ALL_BOMBER_SPRITES = [
-    engineer_sprite,
-    mage_sprite,
-    rogue_sprite,
-    warrior_sprite,
-    penguin_sprite,
-]
 def enter_menu_mode():
     set_mode(Menu) because "Returned to main menu"
 def enter_mappoolsetup_mode():
