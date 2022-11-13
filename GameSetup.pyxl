@@ -1,0 +1,130 @@
+GameSetup
+════════════════════════════════════════════════════════════════════════
+
+const MENU_LIVES = 0
+const MENU_ROUNDS = 1
+const MENU_ROUND_SECONDS = 2
+const MENU_BOTS = 3
+
+const MENU_ITEMS = ["# Lives: ", "# Rounds: ", "Round Time: ", "# Bots: "]
+
+const MENU_LABEL_TEXT_ARGS = {font:font, color:#f, x_align:"right", z:20}
+const MENU_VALUE_TEXT_ARGS = {font:font, color:#f, x_align:"center", z:20}
+const MENU_HELP_TEXT_ARGS = {font:font, color:#f, x_align:"center", z:20}
+
+def enter_previous_mode():
+    todo("Backing out of GameSetup should either go to Menu or PlayerSetup, depending on player count")
+    set_mode(Menu) because "Backed out to previous menu"
+def enter_mappoolsetup_mode():
+    // Set up bots.
+    // Get a list of sprites not in use by players
+    let available_bomber_sprites = clone(ALL_BOMBER_SPRITES)
+    for i < size(g_player_infos):
+        if g_player_infos[i] != nil:
+            fast_remove_value(available_bomber_sprites, g_player_infos[i].sprite_sheet)
+    debug_print(available_bomber_sprites)
+    // Populate empty player slots with bots, up to the requested limit
+    for i < g_game_info.num_bots:
+        for j < size(g_player_infos):
+            if g_player_infos[j] == nil:
+                g_player_infos[j] = {
+                    gamepad: make_dummy_gamepad(j),
+                    sprite_sheet: pop(available_bomber_sprites),
+                    is_cpu: true,
+                }
+                break
+            
+    set_mode(MapPoolSetup) because "Advanced to map pool setup"
+    
+let current_menu_item = MENU_LIVES
+let min_num_bots = 0
+let max_num_bots = 4
+let disable_input = false
+
+enter
+────────────────────────────────────────────────────────────────────────
+current_menu_item = MENU_LIVES
+min_num_bots = 0
+max_num_bots = 4
+disable_input = false
+
+// Compute min/max bot count
+for player in g_player_infos:
+    if player ≠ nil and not player.is_cpu:
+        max_num_bots -= 1
+// If there's only one human player, there must be at least one bot.
+// In multiplayer games, there can be zero bots.
+min_num_bots = if max_num_bots == 3 then 1 else 0
+g_game_info.num_bots = clamp(g_game_info.num_bots, min_num_bots, max_num_bots)
+
+frame
+────────────────────────────────────────────────────────────────────────
+// Handle input
+if not disable_input:
+    // Handle cursor movement
+    if joy.yy ≠ 0:
+        play_sound(SND_CURSOR_MOVE)
+        current_menu_item = (current_menu_item + size(MENU_ITEMS) + joy.yy) mod size(MENU_ITEMS)        
+    if joy.xx ≠ 0:
+        play_sound(SND_CURSOR_MOVE)
+        if current_menu_item == MENU_LIVES:
+            g_game_info.num_lives = clamp(g_game_info.num_lives + joy.xx, 1, 10)
+        else if current_menu_item == MENU_ROUNDS:
+            g_game_info.num_rounds = clamp(g_game_info.num_rounds + joy.xx, 1, 10)
+        else if current_menu_item == MENU_ROUND_SECONDS:
+            g_game_info.seconds_per_round = clamp(g_game_info.seconds_per_round + joy.xx*30, 0, 300)
+        else if current_menu_item == MENU_BOTS:
+            g_game_info.num_bots = clamp(g_game_info.num_bots + joy.xx, min_num_bots, max_num_bots)
+    if joy.aa:
+        disable_input = true
+        play_sound(SND_CURSOR_ACCEPT)
+        add_frame_hook(fade_out, enter_mappoolsetup_mode, 30, ∅, {})
+    else if joy.bb:
+        disable_input = true
+        play_sound(SND_CURSOR_BACK)
+        add_frame_hook(fade_out, enter_previous_mode, 30, ∅, {})
+// Draw menu
+let menu_offset = xy(200, 100)
+let value_offset = xy(240, 100)
+let help_offset = xy(0.5*SCREEN_SIZE.x, 150)
+for menu_item at i in MENU_ITEMS:
+    draw_text({text:menu_item, pos:menu_offset, ...MENU_LABEL_TEXT_ARGS})
+    if i == MENU_LIVES:
+        if current_menu_item == i:
+            draw_text({pos:value_offset, text:replace("[<] " + g_game_info.num_lives + " [>]", joy.prompt), ...MENU_VALUE_TEXT_ARGS})
+            draw_text({pos:help_offset, text:"How many lives does each player get per round?", ...MENU_HELP_TEXT_ARGS})
+        else:
+            draw_text({pos:value_offset, text:g_game_info.num_lives, ...MENU_VALUE_TEXT_ARGS})
+    else if i == MENU_ROUNDS:
+        if current_menu_item == i:
+            draw_text({pos:value_offset, text:replace("[<] " + g_game_info.num_rounds + " [>]", joy.prompt), ...MENU_VALUE_TEXT_ARGS})
+            draw_text({pos:help_offset, text:"How rounds to play?", ...MENU_HELP_TEXT_ARGS})
+        else:
+            draw_text({pos:value_offset, text:g_game_info.num_rounds, ...MENU_VALUE_TEXT_ARGS})
+    else if i == MENU_ROUND_SECONDS:
+        const minutes = floor(g_game_info.seconds_per_round / 60)
+        const seconds = g_game_info.seconds_per_round mod 60
+        const round_time = if g_game_info.seconds_per_round == 0 then "∞" else minutes+":"+format_number(seconds, "00")
+        if current_menu_item == i:
+            draw_text({pos:value_offset, text:replace("[<] " + round_time + " [>]", joy.prompt), ...MENU_VALUE_TEXT_ARGS})
+            draw_text({pos:help_offset, text:"How long is each round?", ...MENU_HELP_TEXT_ARGS})
+        else:
+            draw_text({pos:value_offset, text:round_time, ...MENU_VALUE_TEXT_ARGS})
+    else if i == MENU_BOTS:
+        if current_menu_item == i:
+            draw_text({pos:value_offset, text:replace("[<] " + g_game_info.num_bots + " [>]", joy.prompt), ...MENU_VALUE_TEXT_ARGS})
+            draw_text({pos:help_offset, text:"How many AI bombers?", ...MENU_HELP_TEXT_ARGS})
+        else:
+            draw_text({pos:value_offset, text:g_game_info.num_bots, ...MENU_VALUE_TEXT_ARGS})
+    menu_offset.y += font.line_height
+    value_offset.y += font.line_height
+// Draw instructions
+preserving_transform:
+    compose_transform(xy(0.5*SCREEN_SIZE.x, SCREEN_SIZE.y))
+    draw_text({font:font, x_align:"center", y_align:"bottom", pos:xy(2,-2), color:#f,
+        text:replace("[<][>]Edit   [^][v]Scroll   (a)Start Game   (b)Back", joy.prompt)})
+
+leave
+────────────────────────────────────────────────────────────────────────
+reset_post_effects()
+remove_frame_hooks_by_mode(get_mode())

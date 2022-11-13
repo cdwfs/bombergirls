@@ -15,7 +15,8 @@
         "PostGame",
         "Credits",
         "Help",
-        "MapPoolSetup"
+        "MapPoolSetup",
+        "GameSetup"
     ],
     "start_mode": "Menu",
     "docs": [],

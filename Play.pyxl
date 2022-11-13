@@ -645,16 +645,15 @@ map_xform = map_offset(map)
 // Set reasonable defaults.
 if get_previous_mode() == ∅:
     debug_print("Debug mode!")
-    
-// Fill all empty player slots with AIs
-if DEBUG_AI:
-    for i < size(g_player_infos):
-        if g_player_infos[i] == ∅:
-            g_player_infos[i] = {
-                gamepad: make_dummy_gamepad(i), // includes player index in gamepad.index
-                sprite_sheet: warrior_sprite,
-                is_cpu:true,
-            }
+    // Fill all empty player slots with AIs
+    if DEBUG_AI:
+        for i < size(g_player_infos):
+            if g_player_infos[i] == ∅:
+                g_player_infos[i] = {
+                    gamepad: make_dummy_gamepad(i), // includes player index in gamepad.index
+                    sprite_sheet: warrior_sprite,
+                    is_cpu:true,
+                }
 
 // Search map for box cells, replace them with floors, and spawn box entities.
 box_grid = make_array2d(map.size.x, map.size.y, ∅)

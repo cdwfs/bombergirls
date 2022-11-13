@@ -81,8 +81,18 @@ def make_dummy_gamepad(player_index):
 // Global game setup state, so we don't have to keep passing it from mode to mode
 //
 
+// Filled out in GameSetup.
+const DEFAULT_GAME_INFO = {
+    num_lives: 3,
+    num_rounds: 3,
+    seconds_per_round: 60,
+    num_bots: 0,
+}
+let g_game_info = clone(DEFAULT_GAME_INFO)
+
 // Filled out in PlayerSetup. A null entry means "no player in this slot". If non-null, the
 // expected contents are { gamepad, spritesheet, is_cpu }
+// In solo mode, we hard-code this in the main menu.
 let g_player_infos = [∅,∅,∅,∅]
 
 // Filled out in MapPoolSetup. Expected contents are a list of indices into MAPS_YAML.maps

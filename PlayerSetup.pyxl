@@ -6,8 +6,8 @@ const PLAYER_STATE_ACTIVE = "ACTIVE"
 const PLAYER_STATE_READY = "READY"
 def enter_menu_mode():
     set_mode(Menu) because "Returned to main menu"
-def enter_mappoolsetup_mode():
-    set_mode(MapPoolSetup) because "Advanced to map pool setup"
+def enter_gamesetup_mode():
+    set_mode(GameSetup) because "Advanced to game setup"
 
 let players = [∅,∅,∅,∅]
 let disable_input = false
@@ -89,7 +89,7 @@ if not disable_input:
             add_frame_hook(fade_out, enter_menu_mode, 30, ∅)
     // If at least two players are ready and all other players are inactive, start a
     // countdown to enter play mode. Any player entering the ready state resets the timer.
-    const MIN_PLAYER_COUNT = if DEBUG_DEV_MODE and DEBUG_AI then 1 else 2
+    const MIN_PLAYER_COUNT = 2
     if ready_player_count ≥ MIN_PLAYER_COUNT and active_player_count == 0 and countdown_timer == ∅:
         countdown_timer = 60*3
     if countdown_timer ≠ ∅:
@@ -101,7 +101,7 @@ if not disable_input:
         if countdown_timer ≤ 0:
             disable_input = true
             play_sound(SND_BOMB_EXPLODE)
-            add_frame_hook(fade_out, enter_mappoolsetup_mode, 30, ∅)
+            add_frame_hook(fade_out, enter_gamesetup_mode, 30, ∅)
     debug_watch(countdown_timer)
         
 // Draw each player's state
@@ -143,7 +143,7 @@ for player in players:
             draw_text({font:font, pos:xy(25% SCREEN_SIZE.x, 25% SCREEN_SIZE.y+32), shadow:25% player.color,
                 x_align:"center", text:replace("(b) Back", pad.prompt),
                 color:#f})
-    // Draw countdown if all players are ready
+    // Draw countdown if at least two players are ready
     if countdown_timer ≠ ∅:
         draw_rect({pos:50% SCREEN_SIZE, color:#888, size:xy(SCREEN_SIZE.x, 32)})
         const secs = ceil(countdown_timer/60)

@@ -1,26 +1,36 @@
 Menu
 ════════════════════════════════════════════════════════════════════════
-const MENU_NEW_GAME = 0
-const MENU_HELP = 1
-const MENU_CREDITS = 2
-const MENU_ITEMS = ["New Game", "Help", "Credits"]
+const MENU_SOLO = 0
+const MENU_MULTIPLAYER_LOCAL = 1
+const MENU_HELP = 2
+const MENU_CREDITS = 3
+const MENU_ITEMS = ["Single Player", "Multiplayer (Local)", "Help", "Credits"]
 
 const MENU_ITEM_TEXT_ARGS = {font:font, color:#f, x_align:"left"}
 const MENU_CURSOR_TEXT_ARGS = {font:font, text:replace("(a)", gamepad_array[0].prompt), x_align:"right", color:#f}
 
-def enter_pregame_mode(data):
-    set_mode(PlayerSetup) because "Choose New Game from menu"
+def enter_solo_mode(data):
+    // Hard-code player info for single-player mode
+    g_player_infos = [∅,∅,∅,∅]
+    g_player_infos[0] = {
+        gamepad: gamepad_array[0],
+        sprite_sheet: engineer_sprite,
+        is_cpu: false,
+    }
+    set_mode(GameSetup) because "Choose 'Single Player' from menu"
+def enter_multiplayer_mode(data):
+    set_mode(PlayerSetup) because "Choose 'Multiplayer (Local)' from menu"
 def enter_help_mode(data):
     set_mode(Help) because "Choose Help from menu"
 def enter_credits_mode(data):
     set_mode(Credits) because "Choose Credits from menu"
 
-let current_menu_item = MENU_NEW_GAME
+let current_menu_item = MENU_MULTIPLAYER_LOCAL
 let disable_input = false
 
 enter
 ────────────────────────────────────────────────────────────────────────
-current_menu_item = MENU_NEW_GAME
+current_menu_item = MENU_MULTIPLAYER_LOCAL
 disable_input = false
 
 if not bgm_is_playing():
@@ -37,10 +47,14 @@ if not disable_input:
         
         // Handle menu selection
         if pad.aa ≠ 0:
-            if current_menu_item == MENU_NEW_GAME:
+            if current_menu_item == MENU_SOLO:
                 disable_input = true
                 play_sound(SND_CURSOR_ACCEPT)
-                add_frame_hook(fade_out, enter_pregame_mode, 30, ∅, {})
+                add_frame_hook(fade_out, enter_solo_mode, 30, ∅, {})
+            else if current_menu_item == MENU_MULTIPLAYER_LOCAL:
+                disable_input = true
+                play_sound(SND_CURSOR_ACCEPT)
+                add_frame_hook(fade_out, enter_multiplayer_mode, 30, ∅, {})
             else if current_menu_item == MENU_HELP:
                 play_sound(SND_CURSOR_ACCEPT)
                 add_frame_hook(fade_out, enter_help_mode, 30, nil, {})
