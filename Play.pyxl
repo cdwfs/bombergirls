@@ -70,6 +70,62 @@ def make_bomber_entity(player):
         active_bomb_count: 0,
         })
 
+def shrink_map(amount):
+    def flash_map_begin():
+        play_sound(SND_COUNTDOWN_TICK)
+    def flash_map_cb(frames_left, total_frames, data):
+        if frames_left < total_frames/2:
+            return
+        const opacity = sqrt(lerp(1, 0, frames_left, total_frames, total_frames/2))
+        const c = rgba(#f00, opacity)
+        const mo = map_offset(map)
+        for map_outer_wall_offset+1 ≤ i ≤ map_outer_wall_offset+amount:
+            const tl = i
+            const tr = map.size.x - i - 1
+            const tu = i
+            const td = map.size.y - i - 1
+            for tl ≤ tx ≤ tr:
+                draw_corner_rect({corner:mo + xy(tx,tu)*BLOCK_SIZE, size:BLOCK_SIZE, color:c, z:10})
+                draw_corner_rect({corner:mo + xy(tx,td)*BLOCK_SIZE, size:BLOCK_SIZE, color:c, z:10})
+            for tu+1 ≤ ty ≤ td-1:
+                draw_corner_rect({corner:mo + xy(tl,ty)*BLOCK_SIZE, size:BLOCK_SIZE, color:c, z:10})
+                draw_corner_rect({corner:mo + xy(tr,ty)*BLOCK_SIZE, size:BLOCK_SIZE, color:c, z:10})
+    def increase_map_outer_wall_offset():
+        map_outer_wall_offset += amount
+        const tl = map_outer_wall_offset
+        const tr = map.size.x - map_outer_wall_offset - 1
+        const tu = map_outer_wall_offset
+        const td = map.size.y - map_outer_wall_offset - 1
+        // update map tiles
+        for 0 ≤ my < map.size.y:
+            for 0 ≤ mx < map.size.x:
+                if mx < tl or mx > tr or my < tu or my > td:
+                    set_map_sprite(map, xy(mx,my), MAP_SPRITE_EMPTY, MAP_LAYER_OBJECTS)
+                    set_map_sprite(map, xy(mx,my), MAP_SPRITE_EMPTY, MAP_LAYER_FLOOR)
+                else if mx == tl or mx == tr or my == tu or my == td:
+                    set_map_sprite(map, xy(mx,my), map.info.wall_sprite, MAP_LAYER_OBJECTS)
+        // Bombers outside the new narrower map will be automatically killed.
+        // Everthing else just instantly disappears.
+        def remove_out_of_bounds_entities(ent, grid):
+            const icell = map_pos_to_cell(ent.pos)
+            if icell.x ≤ tl or icell.x ≥ tr or icell.y ≤ tu or icell.y ≥ td:
+                if grid:
+                    grid[icell.x][icell.y] = ∅
+                return iterate.REMOVE
+        iterate(bombs, remove_out_of_bounds_entities, bomb_grid)
+        iterate(boxes, remove_out_of_bounds_entities, box_grid)
+        iterate(breaking_boxes, remove_out_of_bounds_entities, box_grid)
+        iterate(explosions, remove_out_of_bounds_entities, explosion_grid)
+        iterate(powerups, remove_out_of_bounds_entities, powerup_grid)
+        // update walk costs so AIs don't wander outside the map
+        populate_walk_cost_grid()
+
+    sequence(
+        {callback:flash_map_cb, begin_callback:flash_map_begin, frames: 30},
+        {callback:flash_map_cb, begin_callback:flash_map_begin, frames: 30},
+        {callback:flash_map_cb, begin_callback:flash_map_begin, frames: 30},
+        increase_map_outer_wall_offset)
+
 // ACTIVE BOMBERS
 
 // Record which cells have active bombers in them
@@ -209,8 +265,7 @@ def itor_active_bomber_place_bomb(bomber):
 // RO: bomber.pos, explosion_grid, mode_frames
 // RW: bomber.death_frame, dead_bombers
 def itor_active_bomber_kill(bomber):
-    const icell = map_pos_to_cell(bomber.pos)
-    if explosion_grid[icell.x][icell.y]:
+    def kill_bomber(bomber):
         play_sound(SND_BOMBER_DEATH)
         delay(play_sound, 120, SND_BOMBER_DEATH2)
         push(dead_bombers, make_entity({
@@ -220,6 +275,19 @@ def itor_active_bomber_kill(bomber):
             death_time: mode_frames,
             player: bomber.player,
             }))
+    const icell = map_pos_to_cell(bomber.pos)
+    // kill players touching an explosion
+    if explosion_grid[icell.x][icell.y]:
+        kill_bomber(bomber)
+        return iterate.REMOVE
+    // kill players inside the walls, and set the player's remaining lives to zero
+    const tl = map_outer_wall_offset
+    const tr = map.size.x - map_outer_wall_offset - 1
+    const tu = map_outer_wall_offset
+    const td = map.size.y - map_outer_wall_offset - 1
+    if icell.x ≤ tl or icell.x ≥ tr or icell.y ≤ tu or icell.y ≥ td:
+        kill_bomber(bomber)
+        bomber.player.lives = 0
         return iterate.REMOVE
 
 // DEAD BOMBERS
@@ -602,6 +670,7 @@ def itor_active_bomber_ai(bomber):
 // the cell does not contain an entity of that type.
 let map = nil
 let map_xform = xy(0,0)
+let map_outer_wall_offset = 0
 let players = []
 let active_bombers = []
 let active_bomber_grid = []
@@ -624,6 +693,7 @@ enter
 // Initialize mode variables
 map = ∅
 map_xform = xy(0,0)
+map_outer_wall_offset = 0
 players = []
 active_bombers = []
 active_bomber_grid = []
