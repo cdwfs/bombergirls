@@ -379,7 +379,7 @@ def itor_box_break(box):
     if explosion_grid[icell.x][icell.y]:
         play_sound(SND_BOX_BREAK)
         const bbox = make_entity({
-            sprite: map.info.crate_destroyed_sprite,
+            sprite: map.info.box_destroyed_sprite,
             pos: box.pos,
             z: box.z+1
             })
@@ -663,10 +663,10 @@ for mx < map.size.x:
     for my < map.size.y:
         const icell = xy(mx,my)
         const ms = get_map_sprite(map, icell, MAP_LAYER_OBJECTS)
-        if ms.is_crate:
+        if ms.is_box:
             const cell_pos = map_cell_to_pos(icell)
             const box = make_entity({
-                sprite: map.info.crate_sprite,
+                sprite: map.info.box_sprite,
                 pos: cell_pos,
                 z: 2,
                 })

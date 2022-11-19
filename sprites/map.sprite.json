@@ -29,12 +29,12 @@
             "y": 1,
             "can_walk": true
         },
-        "crate-chest-brown": {
+        "box-chest-brown": {
             "x": 0,
             "y": 2,
-            "is_crate": true
+            "is_box": true
         },
-        "crate-chest-brown-destroyed": {
+        "box-chest-brown-destroyed": {
             "x": 0,
             "y": 3
         }

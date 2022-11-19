@@ -16,8 +16,8 @@ def create_map_from_def(map_def):
     let spawn_cells = []
     const floor_sprite = map_sprite["floor-"+(map_def.floor default "dirt-white")]
     const wall_sprite  = map_sprite["wall-"+(map_def.wall default "brick-red")]
-    const crate_sprite = map_sprite["crate-"+(map_def.crate default "chest-brown")]
-    const crate_sprite_destroyed = map_sprite["crate-"+(map_def.floor default "chest-brown")+"-destroyed"]
+    const box_sprite = map_sprite["box-"+(map_def.box default "chest-brown")]
+    const box_sprite_destroyed = map_sprite["box-"+(map_def.floor default "chest-brown")+"-destroyed"]
     for mx < map_size.x:
         for my < map_size.y:
             const mc = xy(mx,my)
@@ -28,7 +28,7 @@ def create_map_from_def(map_def):
             if      c == ".": set_map_sprite(map, mc, MAP_SPRITE_EMPTY, MAP_LAYER_OBJECTS)
             else if c == "X": set_map_sprite(map, mc, wall_sprite, MAP_LAYER_OBJECTS)
             else if c == "x": set_map_sprite(map, mc, wall_sprite, MAP_LAYER_OBJECTS)
-            else if c == "o": set_map_sprite(map, mc, crate_sprite, MAP_LAYER_OBJECTS)
+            else if c == "o": set_map_sprite(map, mc, box_sprite, MAP_LAYER_OBJECTS)
             else if c == "P":
                 push(spawn_cells, mc)
                 set_map_sprite(map, mc, MAP_SPRITE_EMPTY, MAP_LAYER_OBJECTS)
@@ -42,7 +42,7 @@ def create_map_from_def(map_def):
         players_max: map_def.players_max,
         wall_sprite: wall_sprite,
         floor_sprite: floor_sprite,
-        crate_sprite: crate_sprite,
-        crate_destroyed_sprite: crate_sprite_destroyed,
+        box_sprite: box_sprite,
+        box_destroyed_sprite: box_sprite_destroyed,
     }
     return map
