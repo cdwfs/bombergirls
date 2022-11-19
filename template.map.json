@@ -2,6 +2,6 @@
     "url": "template.tmx",
     "license": "TODO",
     "sprite_url_table": {
-        "<default>": "map.sprite.json"
+        "<default>": "sprites/map.sprite.json"
     }
 }
