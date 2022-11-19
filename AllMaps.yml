@@ -20,21 +20,21 @@ maps:
         X.xxxxxx..xxx.X
         XP.oo.....oo.PX
         XXXXXXXXXXXXXXX
-    - name: My Second Map
-      description: This one is fancier!
+    - name: The Block Out
+      description: Dig carefully!
       #players_min: 2 # implicitly 2 if not specified
       #players_max: 4 # implicitly 4 if not specified
       tiles: |
         XXXXXXXXXXXXXXX
-        X.............X
-        X.............X
-        X.............X
-        X.............X
-        X.............X
-        X.............X
-        X.............X
-        X.............X
-        X.............X
-        X.............X
-        X.............X
+        XP.ooooooooo.PX
+        X.ooooooooooo.X
+        XoooooooooooooX
+        XoooooooooooooX
+        XoooooooooooooX
+        XoooooooooooooX
+        XoooooooooooooX
+        XoooooooooooooX
+        XoooooooooooooX
+        X.ooooooooooo.X
+        XP.ooooooooo.PX
         XXXXXXXXXXXXXXX
